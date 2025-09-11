@@ -1,0 +1,3 @@
+# Ignore README and database.sql
+README.md
+database.sql
