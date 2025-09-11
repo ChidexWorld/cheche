@@ -31,22 +31,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $database = new Database();
-            $conn = $database->getConnection();
+            $db = $database->getConnection();
             
             // Check if username or email already exists
-            $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-            $stmt->execute([$username, $email]);
-            if ($stmt->fetch()) {
-                $error = 'Username or email already exists';
+            $existing = $db->select('users', ['username' => $username]);
+            if (!empty($existing)) {
+                $error = 'Username already exists';
             } else {
-                // Create new user
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $conn->prepare("INSERT INTO users (full_name, username, email, password, role) VALUES (?, ?, ?, ?, ?)");
-                
-                if ($stmt->execute([$full_name, $username, $email, $hashed_password, $role])) {
-                    $success = 'Account created successfully! You can now login.';
+                $existing = $db->select('users', ['email' => $email]);
+                if (!empty($existing)) {
+                    $error = 'Email already exists';
                 } else {
-                    $error = 'Registration failed. Please try again.';
+                    // Create new user
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $userData = [
+                        'full_name' => $full_name,
+                        'username' => $username,
+                        'email' => $email,
+                        'password' => $hashed_password,
+                        'role' => $role
+                    ];
+                    
+                    if ($db->insert('users', $userData)) {
+                        $success = 'Account created successfully! You can now login.';
+                    } else {
+                        $error = 'Registration failed. Please try again.';
+                    }
                 }
             }
         } catch (Exception $e) {

@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update stats with animation
     animateStats();
 
+    // Initialize password toggles
+    initializePasswordToggles();
+
     // Form validation
     const forms = document.querySelectorAll('form');
     forms.forEach(form => {
@@ -232,4 +235,51 @@ function downloadVideo(videoPath, videoTitle) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// Password toggle functionality
+function initializePasswordToggles() {
+    const passwordInputs = document.querySelectorAll('input[type="password"]');
+    
+    passwordInputs.forEach(function(passwordInput) {
+        // Skip if already wrapped
+        if (passwordInput.parentNode.classList.contains('password-container')) {
+            return;
+        }
+        
+        // Create container
+        const container = document.createElement('div');
+        container.className = 'password-container';
+        
+        // Create toggle button
+        const toggleButton = document.createElement('button');
+        toggleButton.type = 'button';
+        toggleButton.className = 'password-toggle';
+        toggleButton.innerHTML = '<span class="eye-icon">👁️</span><span class="eye-slash">🙈</span>';
+        
+        // Wrap input in container
+        passwordInput.parentNode.insertBefore(container, passwordInput);
+        container.appendChild(passwordInput);
+        container.appendChild(toggleButton);
+        
+        // Add click event
+        toggleButton.addEventListener('click', function() {
+            togglePasswordVisibility(passwordInput, toggleButton);
+        });
+    });
+}
+
+function togglePasswordVisibility(passwordInput, toggleButton) {
+    const eyeIcon = toggleButton.querySelector('.eye-icon');
+    const eyeSlash = toggleButton.querySelector('.eye-slash');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.style.display = 'none';
+        eyeSlash.style.display = 'inline-block';
+    } else {
+        passwordInput.type = 'password';
+        eyeIcon.style.display = 'inline-block';
+        eyeSlash.style.display = 'none';
+    }
 }

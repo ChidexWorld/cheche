@@ -5,36 +5,38 @@ require_once 'config/session.php';
 requireInstructor();
 
 $database = new Database();
-$conn = $database->getConnection();
+$db = $database->getConnection();
 
 // Get instructor's courses
-$stmt = $conn->prepare("
-    SELECT c.*, 
-           COUNT(v.id) as video_count,
-           COUNT(e.id) as student_count
-    FROM courses c 
-    LEFT JOIN videos v ON c.id = v.course_id 
-    LEFT JOIN enrollments e ON c.id = e.course_id 
-    WHERE c.instructor_id = ? 
-    GROUP BY c.id 
-    ORDER BY c.created_at DESC
-");
-$stmt->execute([$_SESSION['user_id']]);
-$courses = $stmt->fetchAll();
+$all_courses = $db->select('courses', ['instructor_id' => $_SESSION['user_id']], 'created_at DESC');
+$courses = [];
+
+foreach ($all_courses as $course) {
+    $course['video_count'] = $db->count('videos', ['course_id' => $course['id']]);
+    $course['student_count'] = $db->count('enrollments', ['course_id' => $course['id']]);
+    $courses[] = $course;
+}
 
 // Get recent videos
-$stmt = $conn->prepare("
-    SELECT v.*, c.title as course_title 
-    FROM videos v 
-    JOIN courses c ON v.course_id = c.id 
-    WHERE c.instructor_id = ? 
-    ORDER BY v.created_at DESC 
-    LIMIT 5
-");
-$stmt->execute([$_SESSION['user_id']]);
-$recent_videos = $stmt->fetchAll();
+$all_videos = $db->select('videos');
+$recent_videos = [];
+$count = 0;
+
+// Get videos for this instructor's courses
+foreach ($all_videos as $video) {
+    if ($count >= 5) break;
+    
+    $video_course = $db->selectOne('courses', ['id' => $video['course_id']]);
+    if ($video_course && $video_course['instructor_id'] == $_SESSION['user_id']) {
+        $video['course_title'] = $video_course['title'];
+        $recent_videos[] = $video;
+        $count++;
+    }
+}
 
 $active_tab = $_GET['tab'] ?? 'overview';
+$success_message = $_GET['success'] ?? '';
+$error_message = $_GET['error'] ?? '';
 ?>
 
 <!DOCTYPE html>
@@ -77,6 +79,14 @@ $active_tab = $_GET['tab'] ?? 'overview';
             </div>
 
             <div class="dashboard-content">
+                <?php if ($success_message): ?>
+                    <div class="alert alert-success"><?php echo htmlspecialchars($success_message); ?></div>
+                <?php endif; ?>
+                
+                <?php if ($error_message): ?>
+                    <div class="alert alert-error"><?php echo htmlspecialchars($error_message); ?></div>
+                <?php endif; ?>
+
                 <?php if ($active_tab === 'overview'): ?>
                     <h2>Overview</h2>
                     <div class="stats" style="display: flex; gap: 2rem; margin-bottom: 2rem;">
@@ -173,8 +183,8 @@ $active_tab = $_GET['tab'] ?? 'overview';
                         </div>
                         
                         <div class="form-group">
-                            <label for="price">Price (USD) - Leave empty for free</label>
-                            <input type="number" id="price" name="price" min="0" step="0.01" placeholder="0.00">
+                            <label for="price">Price (₦ NGN) - Leave empty for free</label>
+                            <input type="number" id="price" name="price" min="0" step="1" placeholder="0">
                         </div>
                         
                         <button type="submit" class="btn-primary">Create Course</button>

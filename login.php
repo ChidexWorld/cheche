@@ -18,18 +18,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     
-    if (empty($email) || empty($password)) {
-        $error = 'Please fill in all fields';
+    if (empty($email) && empty($password)) {
+        $error = '❌ Please fill in both email and password fields';
+    } elseif (empty($email)) {
+        $error = '❌ Email address is required';
+    } elseif (empty($password)) {
+        $error = '❌ Password is required';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = '❌ Please enter a valid email address';
     } else {
         try {
             $database = new Database();
-            $conn = $database->getConnection();
+            $db = $database->getConnection();
             
-            $stmt = $conn->prepare("SELECT id, username, email, password, role, full_name FROM users WHERE email = ?");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch();
+            $user = $db->selectOne('users', ['email' => $email]);
             
-            if ($user && password_verify($password, $user['password'])) {
+            if (!$user) {
+                $error = '❌ No account found with this email address. <a href="register.php">Sign up here</a>';
+            } elseif (!password_verify($password, $user['password'])) {
+                $error = '❌ Incorrect password. Please check your password and try again';
+            } else {
+                // Login successful
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['email'] = $user['email'];
@@ -42,11 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: student-dashboard.php');
                 }
                 exit();
-            } else {
-                $error = 'Invalid email or password';
             }
         } catch (Exception $e) {
-            $error = 'Login failed. Please try again.';
+            $error = '❌ Login failed due to a system error. Please try again in a few moments.';
         }
     }
 }

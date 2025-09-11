@@ -72,7 +72,7 @@ $courses = $stmt->fetchAll();
                                 
                                 <?php if ($course['price'] > 0): ?>
                                     <div style="margin: 1rem 0;">
-                                        <strong style="color: #4a90e2; font-size: 1.2rem;">$<?php echo number_format($course['price'], 2); ?></strong>
+                                        <strong style="color: #4a90e2; font-size: 1.2rem;">₦<?php echo number_format($course['price']); ?></strong>
                                     </div>
                                 <?php else: ?>
                                     <div style="margin: 1rem 0;">
