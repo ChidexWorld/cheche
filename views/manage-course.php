@@ -1,6 +1,6 @@
 <?php
-require_once 'config/database.php';
-require_once 'config/session.php';
+require_once '../config/database.php';
+require_once '../config/session.php';
 
 requireInstructor();
 
@@ -41,7 +41,7 @@ $students = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Course - <?php echo htmlspecialchars($course['title']); ?></title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
     <nav class="navbar">
@@ -154,6 +154,6 @@ $students = $stmt->fetchAll();
         </div>
     </div>
 
-    <script src="assets/js/main.js"></script>
+    <script src="../assets/js/main.js"></script>
 </body>
 </html>

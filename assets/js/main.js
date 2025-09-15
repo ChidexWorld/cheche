@@ -36,7 +36,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadPopularCourses() {
-    fetch('api/get-courses.php?limit=6')
+    // Determine the correct API path based on current location
+    const isInViews = window.location.pathname.includes('/views/');
+    const apiPath = isInViews ? '../api/get-courses.php?limit=6' : 'api/get-courses.php?limit=6';
+    fetch(apiPath)
         .then(response => response.json())
         .then(data => {
             const coursesGrid = document.getElementById('coursesGrid');

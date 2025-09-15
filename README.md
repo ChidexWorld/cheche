@@ -118,18 +118,25 @@ Configure your database credentials in the `.env` file:
 
 ```
 cheche/
-├── index.php              # Landing page
-├── login.php             # User login
-├── register.php          # User registration
-├── logout.php            # User logout
-├── student-dashboard.php # Student dashboard
-├── instructor-dashboard.php # Instructor dashboard
-├── course.php            # Course viewing page
-├── courses.php           # All courses listing
-├── manage-course.php     # Course management
+├── index.php              # Root entry point (redirects to views)
 ├── database.sql          # Database schema
+├── views/                 # User interface pages
+│   ├── index.php         # Landing page
+│   ├── login.php         # User login
+│   ├── register.php      # User registration
+│   ├── logout.php        # User logout
+│   ├── student-dashboard.php # Student dashboard
+│   ├── instructor-dashboard.php # Instructor dashboard
+│   ├── course.php        # Course viewing page
+│   ├── courses.php       # All courses listing
+│   ├── manage-course.php # Course management
+│   ├── forgot-password.php # Password recovery
+│   ├── reset-password.php # Password reset
+│   └── status.php        # System status page
 ├── config/
-│   ├── database.php      # Database connection
+│   ├── database.php      # Database connection with .env support
+│   ├── database_file.php # File-based database fallback
+│   ├── env.php           # Environment variable loader
 │   └── session.php       # Session management
 ├── api/
 │   ├── create-course.php # Create new course
@@ -144,8 +151,11 @@ cheche/
 │   │   └── style.css     # Main stylesheet
 │   └── js/
 │       └── main.js       # JavaScript functionality
-└── uploads/
-    └── videos/           # Uploaded video files
+├── uploads/
+│   └── videos/           # Uploaded video files
+├── data/                 # JSON data files (file storage mode)
+├── .env                  # Environment configuration (not tracked)
+└── .env.example          # Environment configuration template
 ```
 
 ## Usage

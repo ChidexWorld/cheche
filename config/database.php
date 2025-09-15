@@ -131,6 +131,108 @@ class Database {
 
         return array_values($records);
     }
+
+    // API-compatible methods
+    public function select($table, $where = [], $orderBy = '', $limit = null) {
+        $records = $this->loadTable($table);
+
+        // Apply WHERE conditions
+        if (!empty($where)) {
+            $records = array_filter($records, function($record) use ($where) {
+                foreach ($where as $field => $value) {
+                    if (!isset($record[$field])) {
+                        return false;
+                    }
+                    if (is_array($value)) {
+                        if (!in_array($record[$field], $value)) {
+                            return false;
+                        }
+                    } else {
+                        if ($record[$field] != $value) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            });
+        }
+
+        // Apply ordering
+        if ($orderBy) {
+            $orderParts = explode(' ', trim($orderBy));
+            $orderField = $orderParts[0];
+            $orderDir = isset($orderParts[1]) && strtoupper($orderParts[1]) === 'ASC' ? 'ASC' : 'DESC';
+
+            usort($records, function($a, $b) use ($orderField, $orderDir) {
+                $valA = $a[$orderField] ?? '';
+                $valB = $b[$orderField] ?? '';
+                $result = strcmp($valA, $valB);
+                return $orderDir === 'DESC' ? -$result : $result;
+            });
+        }
+
+        // Apply limit
+        if ($limit !== null) {
+            $records = array_slice($records, 0, $limit);
+        }
+
+        return array_values($records);
+    }
+
+    public function selectOne($table, $where = []) {
+        $results = $this->select($table, $where, '', 1);
+        return !empty($results) ? $results[0] : null;
+    }
+
+    public function count($table, $where = []) {
+        return count($this->select($table, $where));
+    }
+
+    public function insert($table, $data) {
+        return $this->insertRecord($table, $data);
+    }
+
+    public function update($table, $data, $where) {
+        $records = $this->loadTable($table);
+        $updated = false;
+
+        foreach ($records as $key => $record) {
+            $match = true;
+            foreach ($where as $field => $value) {
+                if (!isset($record[$field]) || $record[$field] != $value) {
+                    $match = false;
+                    break;
+                }
+            }
+
+            if ($match) {
+                $records[$key] = array_merge($record, $data);
+                $records[$key]['updated_at'] = date('Y-m-d H:i:s');
+                $updated = true;
+            }
+        }
+
+        if ($updated) {
+            $this->saveTable($table, $records);
+        }
+        return $updated;
+    }
+
+    public function delete($table, $where) {
+        $records = $this->loadTable($table);
+
+        $records = array_filter($records, function($record) use ($where) {
+            foreach ($where as $field => $value) {
+                if (isset($record[$field]) && $record[$field] == $value) {
+                    return false; // Remove this record
+                }
+            }
+            return true; // Keep this record
+        });
+
+        $this->saveTable($table, array_values($records));
+        return true;
+    }
 }
 
 // MySQLi wrapper to mimic PDO interface

@@ -1,6 +1,6 @@
 <?php
-require_once 'config/database.php';
-require_once 'config/session.php';
+require_once '../config/database.php';
+require_once '../config/session.php';
 
 $course_id = $_GET['id'] ?? 0;
 $database = new Database();
@@ -38,7 +38,7 @@ $enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($course['title']); ?> - Course Preview - Cheche</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
     <style>
         .course-preview {
             margin-top: 100px;
@@ -292,6 +292,6 @@ $enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
         </div>
     </footer>
 
-    <script src="assets/js/main.js"></script>
+    <script src="../assets/js/main.js"></script>
 </body>
 </html>

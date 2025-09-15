@@ -1,6 +1,6 @@
 <?php
-require_once 'config/database.php';
-require_once 'config/session.php';
+require_once '../config/database.php';
+require_once '../config/session.php';
 
 requireLogin();
 
@@ -65,7 +65,7 @@ foreach ($videos as $video) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($course['title']); ?> - Cheche</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
     <style>
         .course-layout {
             display: grid;
@@ -247,7 +247,7 @@ foreach ($videos as $video) {
         </div>
     </div>
 
-    <script src="assets/js/main.js"></script>
+    <script src="../assets/js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const video = document.getElementById('mainVideo');

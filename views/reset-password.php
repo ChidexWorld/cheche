@@ -1,6 +1,6 @@
 <?php
-require_once 'config/database.php';
-require_once 'config/env.php';
+require_once '../config/database.php';
+require_once '../config/env.php';
 
 $message = '';
 $error = '';
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $valid_token) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Password - Cheche</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
     <nav class="navbar">
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $valid_token) {
         </p>
     </div>
 
-    <script src="assets/js/main.js"></script>
+    <script src="../assets/js/main.js"></script>
     <script>
         // Client-side password confirmation validation
         document.addEventListener('DOMContentLoaded', function() {
