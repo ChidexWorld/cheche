@@ -44,5 +44,21 @@
         "id": 6,
         "created_at": "2025-09-15 04:36:34",
         "updated_at": "2025-09-15 04:36:34"
+    },
+    {
+        "student_id": 2,
+        "course_id": 1,
+        "enrolled_at": "2025-09-15 09:26:30",
+        "progress": 25,
+        "id": 7,
+        "created_at": "2025-09-15 09:26:30"
+    },
+    {
+        "student_id": 3,
+        "course_id": 1,
+        "enrolled_at": "2025-09-15 09:26:30",
+        "progress": 0,
+        "id": 8,
+        "created_at": "2025-09-15 09:26:30"
     }
 ]

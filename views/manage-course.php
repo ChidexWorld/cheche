@@ -103,7 +103,7 @@ $students = $stmt->fetchAll();
                                     </div>
                                     <div style="margin-top: 1rem;">
                                         <a href="course.php?id=<?php echo $course['id']; ?>&video=<?php echo $video['id']; ?>" class="btn-primary">View</a>
-                                        <a href="api/delete-video.php?id=<?php echo $video['id']; ?>" 
+                                        <a href="../api/delete-video.php?id=<?php echo $video['id']; ?>" 
                                            class="btn-secondary" 
                                            onclick="return confirm('Are you sure you want to delete this video?')"
                                            style="margin-left: 0.5rem;">Delete</a>

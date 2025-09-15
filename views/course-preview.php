@@ -196,7 +196,7 @@ $enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
                                 Continue Learning
                             </a>
                         <?php elseif (isset($_SESSION['user_id']) && isStudent()): ?>
-                            <a href="api/enroll.php?course_id=<?php echo $course['id']; ?>"
+                            <a href="../api/enroll.php?course_id=<?php echo $course['id']; ?>"
                                class="btn-primary"
                                style="width: 100%; margin-bottom: 1rem;"
                                onclick="return confirm('Are you sure you want to enroll in this course?')">

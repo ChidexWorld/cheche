@@ -241,7 +241,7 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                         </div>
                                         
                                         <div style="margin-top: 1rem;">
-                                            <a href="api/enroll.php?course_id=<?php echo $course['id']; ?>" 
+                                            <a href="../api/enroll.php?course_id=<?php echo $course['id']; ?>" 
                                                class="btn-primary" 
                                                onclick="return confirm('Are you sure you want to enroll in this course?')">
                                                 Enroll Now

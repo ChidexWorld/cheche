@@ -154,7 +154,7 @@ $error_message = $_GET['error'] ?? '';
 
                 <?php elseif ($active_tab === 'create-course'): ?>
                     <h2>Create New Course</h2>
-                    <form action="api/create-course.php" method="POST" style="max-width: 600px;">
+                    <form action="../api/create-course.php" method="POST" style="max-width: 600px;">
                         <div class="form-group">
                             <label for="title">Course Title</label>
                             <input type="text" id="title" name="title" required>
@@ -297,7 +297,7 @@ $error_message = $_GET['error'] ?? '';
                 progressBar.style.background = '#dc3545';
             });
             
-            xhr.open('POST', 'api/upload-video.php');
+            xhr.open('POST', '../api/upload-video.php');
             xhr.send(formData);
         }
     </script>

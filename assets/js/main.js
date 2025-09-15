@@ -203,7 +203,8 @@ function updateProgress(video, currentTime) {
     
     // Update progress in database every 10 seconds
     if (Math.floor(currentTime) % 10 === 0) {
-        fetch('api/update-progress.php', {
+        const updateProgressPath = window.location.pathname.includes('/views/') ? '../api/update-progress.php' : 'api/update-progress.php';
+        fetch(updateProgressPath, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -218,7 +219,8 @@ function updateProgress(video, currentTime) {
 }
 
 function markVideoComplete(videoId) {
-    fetch('api/complete-video.php', {
+    const completeVideoPath = window.location.pathname.includes('/views/') ? '../api/complete-video.php' : 'api/complete-video.php';
+    fetch(completeVideoPath, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
