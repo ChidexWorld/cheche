@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Test</title>
+    <style>
+        .modal {
+            display: none !important;
+            position: fixed !important;
+            z-index: 9999 !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: rgba(0,0,0,0.5) !important;
+        }
+
+        .modal:target {
+            display: block !important;
+        }
+
+        .modal-content {
+            background-color: #fefefe !important;
+            margin: 10% auto !important;
+            padding: 0 !important;
+            border-radius: 8px !important;
+            width: 90% !important;
+            max-width: 500px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+            position: relative !important;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .modal-close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            text-decoration: none;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <h1>Modal Test Page</h1>
+
+    <button onclick="showModal('test-modal')" class="btn-primary">
+        Test Modal with JavaScript
+    </button>
+
+    <a href="#test-modal" class="btn-secondary">
+        Test Modal with CSS :target
+    </a>
+
+    <div id="test-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Test Modal</h3>
+                <a href="#" class="modal-close">&times;</a>
+            </div>
+            <div class="modal-body">
+                <p>This is a test modal to debug the functionality.</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="hideModal('test-modal')" class="btn-primary">Close with JS</button>
+                <a href="#" class="btn-secondary">Close with Link</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functionality
+        function showModal(modalId) {
+            console.log('showModal called with:', modalId);
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                console.log('Modal found, showing...');
+                modal.style.setProperty('display', 'block', 'important');
+                console.log('Modal display style:', modal.style.display);
+            } else {
+                console.log('Modal not found!');
+            }
+        }
+
+        function hideModal(modalId) {
+            console.log('hideModal called with:', modalId);
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.setProperty('display', 'none', 'important');
+            }
+        }
+
+        // Add modal event listeners when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+
+            // Close modal when clicking on close button or outside modal
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal-close') || e.target.classList.contains('modal')) {
+                    e.preventDefault();
+                    const modal = e.target.closest('.modal') || e.target;
+                    if (modal && modal.classList.contains('modal')) {
+                        modal.style.setProperty('display', 'none', 'important');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

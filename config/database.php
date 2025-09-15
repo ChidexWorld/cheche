@@ -222,12 +222,13 @@ class Database {
         $records = $this->loadTable($table);
 
         $records = array_filter($records, function($record) use ($where) {
+            // Check if ALL where conditions match this record
             foreach ($where as $field => $value) {
-                if (isset($record[$field]) && $record[$field] == $value) {
-                    return false; // Remove this record
+                if (!isset($record[$field]) || $record[$field] != $value) {
+                    return true; // Keep this record (doesn't match all conditions)
                 }
             }
-            return true; // Keep this record
+            return false; // Remove this record (matches all conditions)
         });
 
         $this->saveTable($table, array_values($records));

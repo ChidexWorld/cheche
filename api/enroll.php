@@ -17,7 +17,7 @@ if (!$course_id) {
         echo json_encode(['success' => false, 'message' => 'Invalid course ID']);
         exit();
     }
-    header('Location: ../student-dashboard.php?tab=browse&error=Invalid course');
+    header('Location: ../views/student-dashboard.php?tab=browse&error=Invalid course');
     exit();
 }
 
@@ -34,7 +34,7 @@ try {
             echo json_encode(['success' => false, 'message' => 'Course not found']);
             exit();
         }
-        header('Location: ../student-dashboard.php?tab=browse&error=Course not found');
+        header('Location: ../views/student-dashboard.php?tab=browse&error=Course not found');
         exit();
     }
 
@@ -50,14 +50,16 @@ try {
             echo json_encode(['success' => false, 'message' => 'Already enrolled in this course']);
             exit();
         }
-        header('Location: ../student-dashboard.php?tab=my-courses&error=Already enrolled in this course');
+        header('Location: ../views/student-dashboard.php?tab=my-courses&error=Already enrolled in this course');
         exit();
     }
 
     // Enroll student
     $enrollment_id = $conn->insert('enrollments', [
         'student_id' => $_SESSION['user_id'],
-        'course_id' => $course_id
+        'course_id' => $course_id,
+        'enrolled_at' => date('Y-m-d H:i:s'),
+        'progress' => 0.00
     ]);
 
     if ($enrollment_id) {
@@ -66,14 +68,14 @@ try {
             echo json_encode(['success' => true, 'message' => 'Successfully enrolled', 'enrollment_id' => $enrollment_id]);
             exit();
         }
-        header('Location: ../course.php?id=' . $course_id . '&success=Successfully enrolled');
+        header('Location: ../views/course.php?id=' . $course_id . '&success=Successfully enrolled');
     } else {
         if ($is_api) {
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Failed to enroll']);
             exit();
         }
-        header('Location: ../student-dashboard.php?tab=browse&error=Failed to enroll');
+        header('Location: ../views/student-dashboard.php?tab=browse&error=Failed to enroll');
     }
 
 } catch (Exception $e) {
@@ -82,6 +84,6 @@ try {
         echo json_encode(['success' => false, 'message' => 'Enrollment failed: ' . $e->getMessage()]);
         exit();
     }
-    header('Location: ../student-dashboard.php?tab=browse&error=Enrollment failed');
+    header('Location: ../views/student-dashboard.php?tab=browse&error=Enrollment failed');
 }
 ?>

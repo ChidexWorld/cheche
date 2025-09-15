@@ -39,6 +39,7 @@ $enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($course['title']); ?> - Course Preview - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/modal.css">
     <style>
         .course-preview {
             margin-top: 100px;
@@ -196,12 +197,9 @@ $enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
                                 Continue Learning
                             </a>
                         <?php elseif (isset($_SESSION['user_id']) && isStudent()): ?>
-                            <a href="../api/enroll.php?course_id=<?php echo $course['id']; ?>"
-                               class="btn-primary"
-                               style="width: 100%; margin-bottom: 1rem;"
-                               onclick="return confirm('Are you sure you want to enroll in this course?')">
+                            <button onclick="showModal('enroll-modal-<?php echo $course['id']; ?>')" class="btn-primary" style="width: 100%; margin-bottom: 1rem; border: none; cursor: pointer;">
                                 Enroll Now
-                            </a>
+                            </button>
                         <?php else: ?>
                             <a href="register.php" class="btn-primary" style="width: 100%; margin-bottom: 1rem;">
                                 Sign Up to Enroll
@@ -292,6 +290,32 @@ $enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
         </div>
     </footer>
 
+    <!-- Enrollment Modal -->
+    <?php if (isset($_SESSION['user_id']) && isStudent() && !$is_enrolled): ?>
+    <div id="enroll-modal-<?php echo $course['id']; ?>" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Enrollment</h3>
+                <a href="#" class="modal-close">&times;</a>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to enroll in "<strong><?php echo htmlspecialchars($course['title']); ?></strong>"?</p>
+                <?php if ($course['price'] > 0): ?>
+                    <p>Course Price: <strong>$<?php echo number_format($course['price'], 2); ?></strong></p>
+                <?php else: ?>
+                    <p>This is a <strong>free</strong> course.</p>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer">
+                <button onclick="handleEnrollment(<?php echo $course['id']; ?>); hideModal('enroll-modal-<?php echo $course['id']; ?>')" class="btn-primary">Yes, Enroll Me</button>
+                <button onclick="hideModal('enroll-modal-<?php echo $course['id']; ?>')" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/modal.js"></script>
 </body>
 </html>

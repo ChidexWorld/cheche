@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal:target {
+            display: block;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .modal-close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            text-decoration: none;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-body p {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-footer .btn-primary,
+        .modal-footer .btn-secondary {
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .modal-footer .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .modal-footer .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .modal-footer .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .modal-footer .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .debug-info {
+            background: #f0f0f0;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Modal Debug Test</h1>
+
+    <div class="debug-info">
+        <h3>Debug Information</h3>
+        <p>Current URL: <span id="current-url"></span></p>
+        <p>URL Hash: <span id="current-hash"></span></p>
+        <p>Modal Element Found: <span id="modal-exists"></span></p>
+    </div>
+
+    <p>Click this button to test the modal:</p>
+    <a href="#test-modal" class="btn-primary" id="modal-trigger">Open Modal</a>
+
+    <p><a href="#" class="btn-primary">Close Modal (remove hash)</a></p>
+
+    <!-- Test Modal -->
+    <div id="test-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Test Modal</h3>
+                <a href="#" class="modal-close">&times;</a>
+            </div>
+            <div class="modal-body">
+                <p>This is a test modal to debug the CSS :target functionality.</p>
+                <p>If you can see this, the modal is working!</p>
+            </div>
+            <div class="modal-footer">
+                <a href="#" class="btn-primary">Confirm</a>
+                <a href="#" class="btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Debug information
+        function updateDebugInfo() {
+            document.getElementById('current-url').textContent = window.location.href;
+            document.getElementById('current-hash').textContent = window.location.hash || 'none';
+            document.getElementById('modal-exists').textContent = document.getElementById('test-modal') ? 'YES' : 'NO';
+        }
+
+        // Update debug info on load and hash change
+        updateDebugInfo();
+        window.addEventListener('hashchange', updateDebugInfo);
+
+        // Test clicking the modal trigger
+        document.getElementById('modal-trigger').addEventListener('click', function() {
+            console.log('Modal trigger clicked');
+            setTimeout(updateDebugInfo, 100);
+        });
+    </script>
+</body>
+</html>

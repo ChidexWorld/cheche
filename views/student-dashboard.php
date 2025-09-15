@@ -81,6 +81,7 @@ $active_tab = $_GET['tab'] ?? 'overview';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/modal.css">
 </head>
 <body>
     <nav class="navbar">
@@ -205,10 +206,14 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                         
                                         <div style="margin-top: 1rem;">
                                             <a href="course.php?id=<?php echo $course['id']; ?>" class="btn-primary">View Course</a>
+                                            <button onclick="showModal('unenroll-modal-<?php echo $course['id']; ?>')" class="btn-secondary" style="margin-left: 10px;">Leave Course</button>
                                         </div>
                                         
                                         <small style="color: #888; margin-top: 10px; display: block;">
-                                            Enrolled: <?php echo date('M j, Y', strtotime($course['enrolled_at'])); ?>
+                                            Enrolled: <?php
+                                                $enrolled_date = $course['enrolled_at'] ?? $course['created_at'] ?? '';
+                                                echo $enrolled_date ? date('M j, Y', strtotime($enrolled_date)) : 'Unknown';
+                                            ?>
                                         </small>
                                     </div>
                                 </div>
@@ -241,11 +246,9 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                         </div>
                                         
                                         <div style="margin-top: 1rem;">
-                                            <a href="../api/enroll.php?course_id=<?php echo $course['id']; ?>" 
-                                               class="btn-primary" 
-                                               onclick="return confirm('Are you sure you want to enroll in this course?')">
+                                            <button onclick="showModal('enroll-modal-<?php echo $course['id']; ?>')" class="btn-primary">
                                                 Enroll Now
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -259,6 +262,57 @@ $active_tab = $_GET['tab'] ?? 'overview';
         </div>
     </div>
 
+    <!-- Enrollment Modals for Browse Tab -->
+    <?php if ($active_tab === 'browse' && !empty($available_courses)): ?>
+        <?php foreach ($available_courses as $course): ?>
+        <div id="enroll-modal-<?php echo $course['id']; ?>" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Confirm Enrollment</h3>
+                    <a href="#" class="modal-close">&times;</a>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to enroll in "<strong><?php echo htmlspecialchars($course['title']); ?></strong>"?</p>
+                    <?php if ($course['price'] > 0): ?>
+                        <p>Course Price: <strong>$<?php echo number_format($course['price'], 2); ?></strong></p>
+                    <?php else: ?>
+                        <p>This is a <strong>free</strong> course.</p>
+                    <?php endif; ?>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="handleEnrollment(<?php echo $course['id']; ?>); hideModal('enroll-modal-<?php echo $course['id']; ?>')" class="btn-primary">Yes, Enroll Me</button>
+                    <button onclick="hideModal('enroll-modal-<?php echo $course['id']; ?>')" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+    <!-- Unenrollment Modals for My Courses Tab -->
+    <?php if ($active_tab === 'my-courses' && !empty($enrolled_courses)): ?>
+        <?php foreach ($enrolled_courses as $course): ?>
+        <div id="unenroll-modal-<?php echo $course['id']; ?>" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Leave Course</h3>
+                    <a href="#" class="modal-close">&times;</a>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to leave "<strong><?php echo htmlspecialchars($course['title']); ?></strong>"?</p>
+                    <p><strong>Warning:</strong> This will remove your enrollment and delete your progress (<?php echo round($course['progress'], 1); ?>% complete).</p>
+                    <p>You can re-enroll later, but you'll lose your current progress.</p>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="handleUnenrollment(<?php echo $course['id']; ?>); hideModal('unenroll-modal-<?php echo $course['id']; ?>')" class="btn-danger">Yes, Leave Course</button>
+                    <button onclick="hideModal('unenroll-modal-<?php echo $course['id']; ?>')" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/modal.js"></script>
 </body>
 </html>
