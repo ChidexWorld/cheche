@@ -5,12 +5,16 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get all courses with instructor info
-$all_courses = $conn->select('courses', [], 'created_at DESC');
+$stmt = $conn->prepare("SELECT * FROM courses ORDER BY created_at DESC");
+$stmt->execute();
+$all_courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $courses = [];
 
 foreach ($all_courses as $course) {
     // Get instructor info
-    $instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+    $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt->execute([$course['instructor_id']]);
+    $instructor = $stmt->fetch(PDO::FETCH_ASSOC);
     $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
     // Get video count
