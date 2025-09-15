@@ -1,5 +1,6 @@
 <?php
 require_once '../config/database.php';
+require_once '../config/env.php';
 
 header('Content-Type: application/json');
 
@@ -9,29 +10,32 @@ $offset = intval($_GET['offset'] ?? 0);
 try {
     $database = new Database();
     $conn = $database->getConnection();
-    
-    $stmt = $conn->prepare("
-        SELECT c.*, u.full_name as instructor_name, 
-               COUNT(v.id) as video_count,
-               COUNT(e.id) as enrollment_count
-        FROM courses c 
-        JOIN users u ON c.instructor_id = u.id 
-        LEFT JOIN videos v ON c.id = v.course_id 
-        LEFT JOIN enrollments e ON c.id = e.course_id 
-        GROUP BY c.id 
-        ORDER BY c.created_at DESC 
-        LIMIT ? OFFSET ?
-    ");
-    
-    $stmt->execute([$limit, $offset]);
-    $courses = $stmt->fetchAll();
-    
+
+    // Get all courses ordered by created_at DESC
+    $courses = $conn->select('courses', [], 'created_at DESC', $limit);
+
+    // Enrich each course with additional data
+    $enriched_courses = [];
+    foreach ($courses as $course) {
+        // Get instructor info
+        $instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+        $course['instructor_name'] = $instructor['full_name'] ?? 'Unknown';
+
+        // Count videos for this course
+        $course['video_count'] = $conn->count('videos', ['course_id' => $course['id']]);
+
+        // Count enrollments for this course
+        $course['enrollment_count'] = $conn->count('enrollments', ['course_id' => $course['id']]);
+
+        $enriched_courses[] = $course;
+    }
+
     echo json_encode([
         'success' => true,
-        'courses' => $courses,
-        'count' => count($courses)
+        'courses' => $enriched_courses,
+        'count' => count($enriched_courses)
     ]);
-    
+
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,

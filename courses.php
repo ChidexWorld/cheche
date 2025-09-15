@@ -5,19 +5,22 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get all courses with instructor info
-$stmt = $conn->prepare("
-    SELECT c.*, u.full_name as instructor_name, 
-           COUNT(v.id) as video_count,
-           COUNT(e.id) as enrollment_count
-    FROM courses c 
-    JOIN users u ON c.instructor_id = u.id 
-    LEFT JOIN videos v ON c.id = v.course_id 
-    LEFT JOIN enrollments e ON c.id = e.course_id 
-    GROUP BY c.id 
-    ORDER BY c.created_at DESC
-");
-$stmt->execute();
-$courses = $stmt->fetchAll();
+$all_courses = $conn->select('courses', [], 'created_at DESC');
+$courses = [];
+
+foreach ($all_courses as $course) {
+    // Get instructor info
+    $instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+    $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
+
+    // Get video count
+    $course['video_count'] = $conn->count('videos', ['course_id' => $course['id']]);
+
+    // Get enrollment count
+    $course['enrollment_count'] = $conn->count('enrollments', ['course_id' => $course['id']]);
+
+    $courses[] = $course;
+}
 ?>
 
 <!DOCTYPE html>
@@ -80,7 +83,8 @@ $courses = $stmt->fetchAll();
                                     </div>
                                 <?php endif; ?>
                                 
-                                <div style="margin-top: 1rem;">
+                                <div style="margin-top: 1rem;  display: flex; gap: 1rem;  flex-direction: column; ">
+                                    <a href="course-preview.php?id=<?php echo $course['id']; ?>" class="btn-secondary" style="margin-right: 10px;">View Details</a>
                                     <a href="register.php" class="btn-primary">Enroll Now</a>
                                 </div>
                                 

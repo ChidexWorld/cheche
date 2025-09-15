@@ -104,10 +104,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            
+
+            <div style="text-align: right; margin-bottom: 1rem;">
+                <a href="forgot-password.php" style="color: #4a90e2; font-size: 0.9rem;">Forgot your password?</a>
+            </div>
+
             <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
         </form>
-        
+
         <p style="text-align: center; margin-top: 2rem;">
             Don't have an account? <a href="register.php" style="color: #4a90e2;">Sign up here</a>
         </p>

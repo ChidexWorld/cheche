@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/session.php';
+require_once '../config/env.php';
 
 requireInstructor();
 
@@ -21,19 +22,39 @@ if (empty($title) || empty($course_id)) {
     exit();
 }
 
-if (!isset($_FILES['video_file']) || $_FILES['video_file']['error'] !== UPLOAD_ERR_OK) {
+if (!isset($_FILES['video_file'])) {
     echo json_encode(['success' => false, 'message' => 'Please select a video file']);
+    exit();
+}
+
+$upload_error = $_FILES['video_file']['error'];
+if ($upload_error !== UPLOAD_ERR_OK) {
+    $error_messages = [
+        UPLOAD_ERR_INI_SIZE => 'File is too large (exceeds PHP upload_max_filesize)',
+        UPLOAD_ERR_FORM_SIZE => 'File is too large (exceeds HTML form MAX_FILE_SIZE)',
+        UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+        UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+        UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+        UPLOAD_ERR_EXTENSION => 'Upload stopped by PHP extension'
+    ];
+
+    $message = isset($error_messages[$upload_error]) ? $error_messages[$upload_error] : 'Unknown upload error';
+    echo json_encode(['success' => false, 'message' => $message]);
     exit();
 }
 
 try {
     $database = new Database();
     $conn = $database->getConnection();
-    
+
     // Verify course belongs to instructor
-    $stmt = $conn->prepare("SELECT id FROM courses WHERE id = ? AND instructor_id = ?");
-    $stmt->execute([$course_id, $_SESSION['user_id']]);
-    if (!$stmt->fetch()) {
+    $course = $conn->selectOne('courses', [
+        'id' => $course_id,
+        'instructor_id' => $_SESSION['user_id']
+    ]);
+
+    if (!$course) {
         echo json_encode(['success' => false, 'message' => 'Course not found or access denied']);
         exit();
     }
@@ -46,19 +67,21 @@ try {
     $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
     
     // Validate file
-    $allowed_extensions = ['mp4', 'avi', 'mov', 'wmv', 'mkv'];
+    $allowed_extensions = Env::getArray('ALLOWED_VIDEO_EXTENSIONS', ['mp4', 'avi', 'mov', 'wmv', 'mkv']);
     if (!in_array($file_ext, $allowed_extensions)) {
         echo json_encode(['success' => false, 'message' => 'Invalid file type. Please upload a video file.']);
         exit();
     }
-    
-    if ($file_size > 100 * 1024 * 1024) { // 100MB limit
-        echo json_encode(['success' => false, 'message' => 'File too large. Maximum size is 100MB.']);
+
+    $max_size = Env::getInt('UPLOAD_MAX_SIZE', 100 * 1024 * 1024); // Default 100MB
+    if ($file_size > $max_size) {
+        $max_mb = round($max_size / (1024 * 1024));
+        echo json_encode(['success' => false, 'message' => "File too large. Maximum size is {$max_mb}MB."]);
         exit();
     }
     
     // Create uploads directory if it doesn't exist
-    $upload_dir = '../uploads/videos/';
+    $upload_dir = '../' . Env::get('UPLOAD_DIR', 'uploads/videos/');
     if (!is_dir($upload_dir)) {
         mkdir($upload_dir, 0755, true);
     }
@@ -66,7 +89,7 @@ try {
     // Generate unique filename
     $new_filename = 'video_' . time() . '_' . uniqid() . '.' . $file_ext;
     $upload_path = $upload_dir . $new_filename;
-    $relative_path = 'uploads/videos/' . $new_filename;
+    $relative_path = Env::get('UPLOAD_DIR', 'uploads/videos/') . $new_filename;
     
     if (!move_uploaded_file($file_tmp, $upload_path)) {
         echo json_encode(['success' => false, 'message' => 'Failed to upload file']);
@@ -75,21 +98,26 @@ try {
     
     // Get video duration (if possible)
     $duration = 0;
-    if (function_exists('shell_exec') && $file_ext === 'mp4') {
-        $ffmpeg_duration = shell_exec("ffprobe -v quiet -show_entries format=duration -of csv=\"p=0\" \"$upload_path\"");
+    $ffprobe_path = Env::get('FFPROBE_PATH', '/usr/bin/ffprobe');
+    if (function_exists('shell_exec') && file_exists($ffprobe_path) && $file_ext === 'mp4') {
+        $ffmpeg_duration = shell_exec("\"$ffprobe_path\" -v quiet -show_entries format=duration -of csv=\"p=0\" \"$upload_path\"");
         if ($ffmpeg_duration) {
             $duration = intval(floatval(trim($ffmpeg_duration)));
         }
     }
     
     // Save to database
-    $stmt = $conn->prepare("
-        INSERT INTO videos (course_id, title, description, video_path, duration, order_number) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    ");
-    
-    if ($stmt->execute([$course_id, $title, $description, $relative_path, $duration, $order_number])) {
-        echo json_encode(['success' => true, 'message' => 'Video uploaded successfully']);
+    $video_id = $conn->insert('videos', [
+        'course_id' => $course_id,
+        'title' => $title,
+        'description' => $description,
+        'video_path' => $relative_path,
+        'duration' => $duration,
+        'order_number' => $order_number
+    ]);
+
+    if ($video_id) {
+        echo json_encode(['success' => true, 'message' => 'Video uploaded successfully', 'video_id' => $video_id]);
     } else {
         // Clean up uploaded file if database insert fails
         unlink($upload_path);

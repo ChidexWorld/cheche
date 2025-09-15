@@ -8,52 +8,68 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get enrolled courses
-$stmt = $conn->prepare("
-    SELECT c.*, u.full_name as instructor_name, 
-           COUNT(v.id) as video_count,
-           e.progress,
-           e.enrolled_at
-    FROM courses c 
-    JOIN users u ON c.instructor_id = u.id
-    JOIN enrollments e ON c.id = e.course_id
-    LEFT JOIN videos v ON c.id = v.course_id 
-    WHERE e.student_id = ? 
-    GROUP BY c.id 
-    ORDER BY e.enrolled_at DESC
-");
-$stmt->execute([$_SESSION['user_id']]);
-$enrolled_courses = $stmt->fetchAll();
+$enrollments = $conn->select('enrollments', ['student_id' => $_SESSION['user_id']], 'enrolled_at DESC');
+$enrolled_courses = [];
+
+foreach ($enrollments as $enrollment) {
+    // Get course info
+    $course = $conn->selectOne('courses', ['id' => $enrollment['course_id']]);
+    if ($course) {
+        // Get instructor info
+        $instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+        $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
+
+        // Get video count
+        $course['video_count'] = $conn->count('videos', ['course_id' => $course['id']]);
+
+        // Add enrollment info
+        $course['progress'] = $enrollment['progress'] ?? 0;
+        $course['enrolled_at'] = $enrollment['enrolled_at'];
+
+        $enrolled_courses[] = $course;
+    }
+}
 
 // Get available courses (not enrolled)
-$stmt = $conn->prepare("
-    SELECT c.*, u.full_name as instructor_name, 
-           COUNT(v.id) as video_count
-    FROM courses c 
-    JOIN users u ON c.instructor_id = u.id
-    LEFT JOIN videos v ON c.id = v.course_id 
-    WHERE c.id NOT IN (
-        SELECT course_id FROM enrollments WHERE student_id = ?
-    )
-    GROUP BY c.id 
-    ORDER BY c.created_at DESC
-    LIMIT 6
-");
-$stmt->execute([$_SESSION['user_id']]);
-$available_courses = $stmt->fetchAll();
+$all_courses = $conn->select('courses', [], 'created_at DESC');
+$enrolled_course_ids = array_column($enrollments, 'course_id');
+$available_courses = [];
+
+$count = 0;
+foreach ($all_courses as $course) {
+    if (!in_array($course['id'], $enrolled_course_ids) && $count < 6) {
+        // Get instructor info
+        $instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+        $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
+
+        // Get video count
+        $course['video_count'] = $conn->count('videos', ['course_id' => $course['id']]);
+
+        $available_courses[] = $course;
+        $count++;
+    }
+}
 
 // Get recent video progress
-$stmt = $conn->prepare("
-    SELECT v.*, c.title as course_title, vp.watched_duration, vp.completed
-    FROM videos v 
-    JOIN courses c ON v.course_id = c.id 
-    JOIN enrollments e ON c.id = e.course_id
-    LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.student_id = ?
-    WHERE e.student_id = ? 
-    ORDER BY vp.watched_at DESC, v.created_at DESC
-    LIMIT 5
-");
-$stmt->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
-$recent_videos = $stmt->fetchAll();
+$video_progress_records = $conn->select('video_progress', ['student_id' => $_SESSION['user_id']], 'watched_at DESC');
+$recent_videos = [];
+
+$count = 0;
+foreach ($video_progress_records as $progress) {
+    if ($count >= 5) break;
+
+    $video = $conn->selectOne('videos', ['id' => $progress['video_id']]);
+    if ($video) {
+        $course = $conn->selectOne('courses', ['id' => $video['course_id']]);
+        if ($course) {
+            $video['course_title'] = $course['title'];
+            $video['watched_duration'] = $progress['watched_duration'];
+            $video['completed'] = $progress['completed'];
+            $recent_videos[] = $video;
+            $count++;
+        }
+    }
+}
 
 $active_tab = $_GET['tab'] ?? 'overview';
 ?>

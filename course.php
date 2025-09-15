@@ -9,28 +9,23 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get course details
-$stmt = $conn->prepare("
-    SELECT c.*, u.full_name as instructor_name 
-    FROM courses c 
-    JOIN users u ON c.instructor_id = u.id 
-    WHERE c.id = ?
-");
-$stmt->execute([$course_id]);
-$course = $stmt->fetch();
-
+$course = $conn->selectOne('courses', ['id' => $course_id]);
 if (!$course) {
     header('Location: student-dashboard.php');
     exit();
 }
+
+// Get instructor details
+$instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+$course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
 // Check if user is enrolled (for students) or owns the course (for instructors)
 $can_access = false;
 if (isInstructor() && $course['instructor_id'] == $_SESSION['user_id']) {
     $can_access = true;
 } elseif (isStudent()) {
-    $stmt = $conn->prepare("SELECT id FROM enrollments WHERE student_id = ? AND course_id = ?");
-    $stmt->execute([$_SESSION['user_id'], $course_id]);
-    $can_access = $stmt->fetch() !== false;
+    $enrollment = $conn->selectOne('enrollments', ['student_id' => $_SESSION['user_id'], 'course_id' => $course_id]);
+    $can_access = $enrollment !== null;
 }
 
 if (!$can_access) {
@@ -39,22 +34,18 @@ if (!$can_access) {
 }
 
 // Get course videos
-$stmt = $conn->prepare("SELECT * FROM videos WHERE course_id = ? ORDER BY order_number ASC, created_at ASC");
-$stmt->execute([$course_id]);
-$videos = $stmt->fetchAll();
+$videos = $conn->select('videos', ['course_id' => $course_id], 'order_number ASC');
 
 // Get video progress (for students)
 $video_progress = [];
 if (isStudent()) {
-    $stmt = $conn->prepare("
-        SELECT video_id, watched_duration, completed 
-        FROM video_progress 
-        WHERE student_id = ? AND video_id IN (SELECT id FROM videos WHERE course_id = ?)
-    ");
-    $stmt->execute([$_SESSION['user_id'], $course_id]);
-    $progress_data = $stmt->fetchAll();
-    foreach ($progress_data as $progress) {
-        $video_progress[$progress['video_id']] = $progress;
+    $all_progress = $conn->select('video_progress', ['student_id' => $_SESSION['user_id']]);
+    foreach ($all_progress as $progress) {
+        // Check if this progress is for a video in this course
+        $video_check = $conn->selectOne('videos', ['id' => $progress['video_id'], 'course_id' => $course_id]);
+        if ($video_check) {
+            $video_progress[$progress['video_id']] = $progress;
+        }
     }
 }
 
@@ -147,14 +138,39 @@ foreach ($videos as $video) {
             <div class="video-section">
                 <?php if ($current_video): ?>
                     <div class="video-player">
-                        <video id="mainVideo" 
-                               controls 
-                               width="100%" 
+                        <video id="mainVideo"
+                               controls
+                               preload="metadata"
+                               width="100%"
                                height="400"
                                data-video-id="<?php echo $current_video['id']; ?>"
                                <?php if (isStudent()): ?>onloadedmetadata="initializeVideoPlayer(this)"<?php endif; ?>>
-                            <source src="<?php echo htmlspecialchars($current_video['video_path']); ?>" type="video/mp4">
-                            Your browser does not support the video tag.
+                            <?php
+                            $video_path = $current_video['video_path'];
+                            $extension = strtolower(pathinfo($video_path, PATHINFO_EXTENSION));
+                            $mime_type = 'video/mp4'; // default
+
+                            switch($extension) {
+                                case 'mp4':
+                                    $mime_type = 'video/mp4';
+                                    break;
+                                case 'avi':
+                                    $mime_type = 'video/x-msvideo';
+                                    break;
+                                case 'webm':
+                                    $mime_type = 'video/webm';
+                                    break;
+                                case 'ogg':
+                                    $mime_type = 'video/ogg';
+                                    break;
+                                case 'mov':
+                                    $mime_type = 'video/quicktime';
+                                    break;
+                            }
+                            ?>
+                            <source src="<?php echo htmlspecialchars($current_video['video_path']); ?>" type="<?php echo $mime_type; ?>">
+                            <p>Your browser does not support the video tag or this video format.</p>
+                            <p><a href="<?php echo htmlspecialchars($current_video['video_path']); ?>" target="_blank">Click here to download and watch the video</a></p>
                         </video>
                     </div>
                     
@@ -236,6 +252,28 @@ foreach ($videos as $video) {
         document.addEventListener('DOMContentLoaded', function() {
             const video = document.getElementById('mainVideo');
             if (video) {
+                // Add error handling
+                video.addEventListener('error', function(e) {
+                    console.error('Video error:', e);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = 'background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; margin: 1rem 0;';
+                    errorDiv.innerHTML = `
+                        <strong>Video playback error:</strong><br>
+                        This video format may not be supported by your browser.<br>
+                        <a href="${video.querySelector('source').src}" target="_blank" style="color: #1976d2;">Click here to download the video</a>
+                    `;
+                    video.parentNode.insertBefore(errorDiv, video.nextSibling);
+                });
+
+                // Add loading event
+                video.addEventListener('loadstart', function() {
+                    console.log('Video loading started');
+                });
+
+                video.addEventListener('canplaythrough', function() {
+                    console.log('Video can play through');
+                });
+
                 initializeVideoPlayer(video);
             }
         });
