@@ -1,4 +1,11 @@
 <?php
+require_once __DIR__ . '/env.php';
+
+// Configure session settings from environment
+ini_set('session.gc_maxlifetime', Env::getInt('SESSION_TIMEOUT', 86400));
+ini_set('session.cookie_httponly', Env::getBool('SESSION_HTTPONLY', true) ? 1 : 0);
+ini_set('session.cookie_secure', Env::getBool('SESSION_SECURE', false) ? 1 : 0);
+
 session_start();
 
 function isLoggedIn() {

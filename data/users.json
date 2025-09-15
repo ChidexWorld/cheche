@@ -23,20 +23,80 @@
         "full_name": "chekwube",
         "username": "cheche",
         "email": "chekwubeimmaculata@gmail.com",
-        "password": "$2y$10$gligGHaRqrUl1yJVeUsi1.BDi8Q.dxNieYJWKJeYe8uFF9G7jkr72",
+        "password": "$2y$10$.Kx4FVbmP\/.KEgtyb.MRjODHXPArvEftmH5zhql7Ky0pKoquHV9eG",
         "role": "student",
         "id": 3,
         "created_at": "2025-09-11 13:50:52",
-        "updated_at": "2025-09-11 13:50:52"
+        "updated_at": "2025-09-15 04:35:53"
     },
     {
         "full_name": "nduoma kingsley",
         "username": "N.kingscheche",
         "email": "kingeson@gmail.com",
-        "password": "$2y$10$E80atUIxmHHhsYT8D4utceq7mVaPLlPusCJhC7NoTNJH\/eK4dY1Ke",
+        "password": "$2y$10$0Ai\/JNZprKYI7KYZ.7.EZu\/haQvFxmNADLjsmt9.NqNyRwOlbg4Je",
         "role": "instructor",
         "id": 4,
         "created_at": "2025-09-11 13:53:45",
-        "updated_at": "2025-09-11 13:53:45"
+        "updated_at": "2025-09-14 14:30:48"
+    },
+    {
+        "full_name": "Test Instructor",
+        "username": "instructor",
+        "email": "instructor@test.com",
+        "password": "$2y$10$f25BZEFFvKOuEVcycPjg0.ZSFk2kKIaa0yhtSjWsy5JfQQL.0Vrl6",
+        "role": "instructor",
+        "id": 5,
+        "created_at": "2025-09-13 14:43:23",
+        "updated_at": "2025-09-13 15:11:32"
+    },
+    {
+        "full_name": "Test Student",
+        "username": "student",
+        "email": "student@test.com",
+        "password": "$2y$10$djolIWbmrtuiTCJ6qSrl7.APPgjgj4IbqkRrNpSyaWyyNPtXoRdeO",
+        "role": "student",
+        "id": 6,
+        "created_at": "2025-09-13 14:46:08",
+        "updated_at": "2025-09-13 14:46:08"
+    },
+    {
+        "full_name": "nduoma kingsley",
+        "username": "n.kings",
+        "email": "chiderastanley272@gmail.com",
+        "password": "$2y$10$XuNnYCcF8ac7olcF9nFMROog6StOgjPtRy3wUBivJpeQGdO3F2Uc6",
+        "role": "student",
+        "id": 7,
+        "created_at": "2025-09-13 15:02:22",
+        "updated_at": "2025-09-14 14:29:04"
+    },
+    {
+        "username": "instructor1",
+        "email": "instructor@cheche.com",
+        "password": "$2y$10$1ZGnTWhVImsmE8qCnVvBsOdKiDnE.ljxfp0o4voF1YgSmwYJHMUfG",
+        "role": "instructor",
+        "full_name": "John Smith",
+        "created_at": "2025-09-15 09:26:30",
+        "updated_at": "2025-09-15 09:26:30",
+        "id": 8
+    },
+    {
+        "username": "student1",
+        "email": "student@cheche.com",
+        "password": "$2y$10$URH6IZc1njD1AbeYDuFMDO1ccvVasevh9iVQlI0wOaNNF5GTK9Feu",
+        "role": "student",
+        "full_name": "Alice Johnson",
+        "created_at": "2025-09-15 09:26:30",
+        "updated_at": "2025-09-15 09:26:30",
+        "id": 9
+    },
+    {
+        "username": "student2",
+        "email": "student2@cheche.com",
+        "password": "$2y$10$KXfB9XuzdhZH.W0yY.6yuu4N7GnZl89ffUmzP\/GUqFYvcK51uFn4i",
+        "role": "student",
+        "full_name": "Bob Wilson",
+        "created_at": "2025-09-15 09:26:30",
+        "updated_at": "2025-09-15 09:26:30",
+        "id": 10
     }
 ]

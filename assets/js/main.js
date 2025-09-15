@@ -33,10 +33,83 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // MODAL FUNCTIONALITY - moved here to consolidate DOMContentLoaded events
+    // Close modal when clicking on close button or outside modal
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-close') || e.target.classList.contains('modal')) {
+            e.preventDefault();
+            const modal = e.target.closest('.modal') || e.target;
+            if (modal && modal.classList.contains('modal')) {
+                modal.style.setProperty('display', 'none', 'important');
+            }
+        }
+    });
+
+    // Handle enrollment with AJAX
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('a[href*="enroll.php"]')) {
+            e.preventDefault();
+            const enrollUrl = e.target.href;
+
+            fetch(enrollUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Fallback to original behavior
+                window.location.href = enrollUrl;
+            });
+        }
+    });
+
+    // Handle unenrollment with AJAX
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('a[href*="unenroll.php"]')) {
+            e.preventDefault();
+            const unenrollUrl = e.target.href;
+
+            fetch(unenrollUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Fallback to original behavior
+                window.location.href = unenrollUrl;
+            });
+        }
+    });
 });
 
 function loadPopularCourses() {
-    fetch('api/get-courses.php?limit=6')
+    // Determine the correct API path based on current location
+    const isInViews = window.location.pathname.includes('/views/');
+    const apiPath = isInViews ? '../api/get-courses.php?limit=6' : 'api/get-courses.php?limit=6';
+    fetch(apiPath)
         .then(response => response.json())
         .then(data => {
             const coursesGrid = document.getElementById('coursesGrid');
@@ -200,7 +273,8 @@ function updateProgress(video, currentTime) {
     
     // Update progress in database every 10 seconds
     if (Math.floor(currentTime) % 10 === 0) {
-        fetch('api/update-progress.php', {
+        const updateProgressPath = window.location.pathname.includes('/views/') ? '../api/update-progress.php' : 'api/update-progress.php';
+        fetch(updateProgressPath, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -215,7 +289,8 @@ function updateProgress(video, currentTime) {
 }
 
 function markVideoComplete(videoId) {
-    fetch('api/complete-video.php', {
+    const completeVideoPath = window.location.pathname.includes('/views/') ? '../api/complete-video.php' : 'api/complete-video.php';
+    fetch(completeVideoPath, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -272,7 +347,7 @@ function initializePasswordToggles() {
 function togglePasswordVisibility(passwordInput, toggleButton) {
     const eyeIcon = toggleButton.querySelector('.eye-icon');
     const eyeSlash = toggleButton.querySelector('.eye-slash');
-    
+
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
         eyeIcon.style.display = 'none';
@@ -283,3 +358,25 @@ function togglePasswordVisibility(passwordInput, toggleButton) {
         eyeSlash.style.display = 'none';
     }
 }
+
+// Modal functionality
+function showModal(modalId) {
+    console.log('showModal called with:', modalId);
+    const modal = document.getElementById(modalId);
+    console.log('Modal element found:', modal);
+    if (modal) {
+        modal.style.setProperty('display', 'block', 'important');
+        console.log('Modal display style set to:', modal.style.display);
+        console.log('Modal computed style:', window.getComputedStyle(modal).display);
+    } else {
+        console.error('Modal not found with ID:', modalId);
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.setProperty('display', 'none', 'important');
+    }
+}
+

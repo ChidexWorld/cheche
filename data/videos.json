@@ -1,1 +1,54 @@
-[]
+[
+    {
+        "course_id": 3,
+        "title": "Test Video 1",
+        "description": "This is a test video",
+        "video_path": "uploads\/videos\/video_1757774715_68c5837bad1e7.mp4",
+        "duration": 0,
+        "order_number": 1,
+        "id": 1,
+        "created_at": "2025-09-13 14:45:15",
+        "updated_at": "2025-09-13 14:45:15"
+    },
+    {
+        "course_id": 2,
+        "title": "srfgkilh;",
+        "description": "tdflio;uigkf",
+        "video_path": "uploads\/videos\/video_1757860648_68c6d32899326.mp4",
+        "duration": 0,
+        "order_number": 1,
+        "id": 2,
+        "created_at": "2025-09-14 14:37:28",
+        "updated_at": "2025-09-15 05:30:00"
+    },
+    {
+        "course_id": 1,
+        "title": "Introduction to HTML",
+        "description": "Learn the basics of HTML structure",
+        "video_path": "uploads\/videos\/html-intro.mp4",
+        "duration": 1200,
+        "order_number": 1,
+        "created_at": "2025-09-15 09:26:30",
+        "id": 3
+    },
+    {
+        "course_id": 1,
+        "title": "CSS Styling Basics",
+        "description": "Introduction to CSS styling",
+        "video_path": "uploads\/videos\/css-basics.mp4",
+        "duration": 1800,
+        "order_number": 2,
+        "created_at": "2025-09-15 09:26:30",
+        "id": 4
+    },
+    {
+        "course_id": 2,
+        "title": "PHP Variables and Functions",
+        "description": "Understanding PHP basics",
+        "video_path": "uploads\/videos\/php-basics.mp4",
+        "duration": 2400,
+        "order_number": 1,
+        "created_at": "2025-09-15 09:26:30",
+        "id": 5
+    }
+]

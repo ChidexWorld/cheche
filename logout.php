@@ -1,7 +1,4 @@
 <?php
-require_once 'config/session.php';
-
-session_destroy();
-header('Location: index.php');
+// Redirect to new location
+header('Location: views/logout.php', true, 301);
 exit();
-?>

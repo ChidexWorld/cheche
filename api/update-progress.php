@@ -11,12 +11,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
-$video_id = intval($input['video_id'] ?? 0);
-$watched_duration = intval($input['watched_duration'] ?? 0);
-$progress = floatval($input['progress'] ?? 0);
+// Accept both JSON and form data
+$input = $_POST;
+if (empty($input)) {
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+}
 
-if (!$video_id || !$watched_duration) {
+$video_id = intval($input['video_id'] ?? 0);
+$watched_duration = intval($input['watched_duration'] ?? $input['progress'] ?? 0);
+$progress = floatval($input['progress'] ?? $input['watched_duration'] ?? 0);
+
+if (!$video_id) {
     echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
     exit();
 }
@@ -24,73 +29,56 @@ if (!$video_id || !$watched_duration) {
 try {
     $database = new Database();
     $conn = $database->getConnection();
-    
+
+    // Verify video exists and get course ID
+    $video = $conn->selectOne('videos', ['id' => $video_id]);
+    if (!$video) {
+        echo json_encode(['success' => false, 'message' => 'Video not found']);
+        exit();
+    }
+
     // Verify student is enrolled in the course containing this video
-    $stmt = $conn->prepare("
-        SELECT v.id 
-        FROM videos v 
-        JOIN enrollments e ON v.course_id = e.course_id 
-        WHERE v.id = ? AND e.student_id = ?
-    ");
-    $stmt->execute([$video_id, $_SESSION['user_id']]);
-    
-    if (!$stmt->fetch()) {
+    $enrollment = $conn->selectOne('enrollments', [
+        'student_id' => $_SESSION['user_id'],
+        'course_id' => $video['course_id']
+    ]);
+
+    if (!$enrollment) {
         echo json_encode(['success' => false, 'message' => 'Access denied']);
         exit();
     }
-    
-    // Update or insert progress
-    $stmt = $conn->prepare("
-        INSERT INTO video_progress (student_id, video_id, watched_duration) 
-        VALUES (?, ?, ?) 
-        ON DUPLICATE KEY UPDATE 
-        watched_duration = GREATEST(watched_duration, VALUES(watched_duration)),
-        watched_at = CURRENT_TIMESTAMP
-    ");
-    
-    if ($stmt->execute([$_SESSION['user_id'], $video_id, $watched_duration])) {
-        // Update course progress
-        updateCourseProgress($conn, $_SESSION['user_id'], $video_id);
-        echo json_encode(['success' => true]);
+
+    // Check if progress record exists
+    $existing_progress = $conn->selectOne('video_progress', [
+        'student_id' => $_SESSION['user_id'],
+        'video_id' => $video_id
+    ]);
+
+    if ($existing_progress) {
+        // Update only if new progress is greater
+        if ($watched_duration > $existing_progress['watched_duration']) {
+            $conn->update('video_progress', [
+                'watched_duration' => $watched_duration,
+                'last_watched' => date('Y-m-d H:i:s')
+            ], [
+                'student_id' => $_SESSION['user_id'],
+                'video_id' => $video_id
+            ]);
+        }
     } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to update progress']);
+        // Insert new progress record
+        $conn->insert('video_progress', [
+            'student_id' => $_SESSION['user_id'],
+            'video_id' => $video_id,
+            'watched_duration' => $watched_duration,
+            'last_watched' => date('Y-m-d H:i:s')
+        ]);
     }
-    
+
+    echo json_encode(['success' => true, 'message' => 'Progress updated']);
+
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Update failed']);
+    echo json_encode(['success' => false, 'message' => 'Update failed: ' . $e->getMessage()]);
 }
 
-function updateCourseProgress($conn, $student_id, $video_id) {
-    // Get course ID from video
-    $stmt = $conn->prepare("SELECT course_id FROM videos WHERE id = ?");
-    $stmt->execute([$video_id]);
-    $course_id = $stmt->fetchColumn();
-    
-    if (!$course_id) return;
-    
-    // Calculate overall progress for the course
-    $stmt = $conn->prepare("
-        SELECT 
-            COUNT(v.id) as total_videos,
-            COUNT(vp.id) as watched_videos,
-            SUM(CASE WHEN vp.completed = 1 THEN 1 ELSE 0 END) as completed_videos
-        FROM videos v 
-        LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.student_id = ?
-        WHERE v.course_id = ?
-    ");
-    $stmt->execute([$student_id, $course_id]);
-    $stats = $stmt->fetch();
-    
-    if ($stats['total_videos'] > 0) {
-        $progress = ($stats['completed_videos'] / $stats['total_videos']) * 100;
-        
-        // Update enrollment progress
-        $stmt = $conn->prepare("
-            UPDATE enrollments 
-            SET progress = ? 
-            WHERE student_id = ? AND course_id = ?
-        ");
-        $stmt->execute([$progress, $student_id, $course_id]);
-    }
-}
 ?>
