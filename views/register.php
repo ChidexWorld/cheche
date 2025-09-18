@@ -34,33 +34,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db = $database->getConnection();
             
             // Check if username or email already exists
-            $existing = $db->select('users', ['username' => $username]);
-            if (!empty($existing)) {
-                $error = 'Username already exists';
-            } else {
-                $existing = $db->select('users', ['email' => $email]);
-                if (!empty($existing)) {
-                    $error = 'Email already exists';
+            $stmt = $db->prepare("SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1");
+            $stmt->execute([$username, $email]);
+            $existing = $stmt->fetch();
+            
+            if ($existing) {
+                if ($existing['username'] === $username) {
+                    $error = 'Username already exists';
                 } else {
-                    // Create new user
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $userData = [
-                        'full_name' => $full_name,
-                        'username' => $username,
-                        'email' => $email,
-                        'password' => $hashed_password,
-                        'role' => $role
-                    ];
+                    $error = 'Email already exists';
+                }
+            } else {
+                // Create new user
+                $stmt = $db->prepare("INSERT INTO users (full_name, username, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+                
+                if ($stmt->execute([
+                    $full_name,
+                    $username,
+                    $email,
+                    password_hash($password, PASSWORD_DEFAULT),
+                    $role
+                ])) {
+                    $_SESSION['user_id'] = $db->lastInsertId();
+                    $_SESSION['username'] = $username;
+                    $_SESSION['role'] = $role;
                     
-                    if ($db->insert('users', $userData)) {
-                        $success = 'Account created successfully! You can now login.';
-                    } else {
-                        $error = 'Registration failed. Please try again.';
-                    }
+                    // Redirect based on role
+                    header('Location: ' . ($role === 'instructor' ? 'instructor-dashboard.php' : 'student-dashboard.php'));
+                    exit();
+                } else {
+                    $error = 'Registration failed. Please try again.';
                 }
             }
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             $error = 'Registration failed. Please try again.';
+            error_log($e->getMessage());
         }
     }
 }

@@ -49,10 +49,9 @@ try {
     $conn = $database->getConnection();
 
     // Verify course belongs to instructor
-    $course = $conn->selectOne('courses', [
-        'id' => $course_id,
-        'instructor_id' => $_SESSION['user_id']
-    ]);
+    $stmt = $conn->prepare("SELECT * FROM courses WHERE id = ? AND instructor_id = ?");
+    $stmt->execute([$course_id, $_SESSION['user_id']]);
+    $course = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$course) {
         echo json_encode(['success' => false, 'message' => 'Course not found or access denied']);
@@ -107,16 +106,22 @@ try {
     }
     
     // Save to database
-    $video_id = $conn->insert('videos', [
-        'course_id' => $course_id,
-        'title' => $title,
-        'description' => $description,
-        'video_path' => $relative_path,
-        'duration' => $duration,
-        'order_number' => $order_number
-    ]);
-
-    if ($video_id) {
+    $stmt = $conn->prepare("
+        INSERT INTO videos (course_id, title, description, video_path, duration, order_number, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+    ");
+    
+    if ($stmt->execute([
+        $course_id,
+        $title,
+        $description,
+        $relative_path,
+        $duration,
+        $order_number
+    ])) {
+        $video_id = $conn->lastInsertId();
+        echo json_encode(['success' => true, 'message' => 'Video uploaded successfully', 'video_id' => $video_id]);
+    } else {
         echo json_encode(['success' => true, 'message' => 'Video uploaded successfully', 'video_id' => $video_id]);
     } else {
         // Clean up uploaded file if database insert fails

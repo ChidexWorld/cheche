@@ -8,25 +8,43 @@ $database = new Database();
 $db = $database->getConnection();
 
 // Get instructor's courses
-$all_courses = $db->select('courses', ['instructor_id' => $_SESSION['user_id']], 'created_at DESC');
+$stmt = $db->prepare("SELECT * FROM courses WHERE instructor_id = ? ORDER BY created_at DESC");
+$stmt->execute([$_SESSION['user_id']]);
+$all_courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $courses = [];
 
 foreach ($all_courses as $course) {
-    $course['video_count'] = $db->count('videos', ['course_id' => $course['id']]);
-    $course['student_count'] = $db->count('enrollments', ['course_id' => $course['id']]);
+    // Get video count
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM videos WHERE course_id = ?");
+    $stmt->execute([$course['id']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $course['video_count'] = (int)$result['count'];
+
+    // Get student count
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM enrollments WHERE course_id = ?");
+    $stmt->execute([$course['id']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $course['student_count'] = (int)$result['count'];
     $courses[] = $course;
 }
 
-// Get recent videos
-$all_videos = $db->select('videos');
+// Get recent videos for this instructor's courses
+$stmt = $db->prepare("
+    SELECT v.* 
+    FROM videos v
+    JOIN courses c ON v.course_id = c.id
+    WHERE c.instructor_id = ?
+    ORDER BY v.created_at DESC
+    LIMIT 5
+");
+$stmt->execute([$_SESSION['user_id']]);
+$all_videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $recent_videos = [];
-$count = 0;
 
-// Get videos for this instructor's courses
 foreach ($all_videos as $video) {
-    if ($count >= 5) break;
-    
-    $video_course = $db->selectOne('courses', ['id' => $video['course_id']]);
+    $stmt = $db->prepare("SELECT * FROM courses WHERE id = ?");
+    $stmt->execute([$video['course_id']]);
+    $video_course = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($video_course && $video_course['instructor_id'] == $_SESSION['user_id']) {
         $video['course_title'] = $video_course['title'];
         $recent_videos[] = $video;
@@ -56,7 +74,7 @@ $error_message = $_GET['error'] ?? '';
                 </a>
             </div>
             <div class="nav-links">
-                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
+                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Instructor'); ?></span>
                 <a href="logout.php" class="btn-secondary">Logout</a>
             </div>
         </div>

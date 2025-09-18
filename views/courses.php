@@ -18,10 +18,16 @@ foreach ($all_courses as $course) {
     $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
     // Get video count
-    $course['video_count'] = $conn->count('videos', ['course_id' => $course['id']]);
+    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM videos WHERE course_id = ?");
+    $stmt->execute([$course['id']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $course['video_count'] = (int)$result['count'];
 
     // Get enrollment count
-    $course['enrollment_count'] = $conn->count('enrollments', ['course_id' => $course['id']]);
+    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM enrollments WHERE course_id = ?");
+    $stmt->execute([$course['id']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $course['enrollment_count'] = (int)$result['count'];
 
     $courses[] = $course;
 }

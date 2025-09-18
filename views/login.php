@@ -31,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $database = new Database();
             $db = $database->getConnection();
             
-            $user = $db->selectOne('users', ['email' => $email]);
+            $stmt = $db->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$user) {
                 $error = '❌ No account found with this email address. <a href="register.php">Sign up here</a>';

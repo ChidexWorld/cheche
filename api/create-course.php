@@ -23,18 +23,22 @@ try {
     $database = new Database();
     $db = $database->getConnection();
     
-    // Create course data
-    $courseData = [
-        'title' => $title,
-        'description' => $description,
-        'instructor_id' => $_SESSION['user_id'],
-        'category' => $category,
-        'price' => $price
-    ];
+    // Create course in database
+    $stmt = $db->prepare("
+        INSERT INTO courses (title, description, instructor_id, category, price, created_at) 
+        VALUES (?, ?, ?, ?, ?, NOW())
+    ");
     
-    $course_id = $db->insert('courses', $courseData);
-    
-    if ($course_id) {
+    if ($stmt->execute([
+        $title,
+        $description,
+        $_SESSION['user_id'],
+        $category,
+        $price
+    ])) {
+        $course_id = $db->lastInsertId();
+        header('Location: ../instructor-dashboard.php?tab=courses&success=Course created successfully');
+    } else {
         header('Location: ../instructor-dashboard.php?tab=courses&success=Course created successfully');
     } else {
         header('Location: ../instructor-dashboard.php?tab=create-course&error=Failed to create course');

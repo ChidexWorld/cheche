@@ -8,19 +8,28 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get enrolled courses
-$enrollments = $conn->select('enrollments', ['student_id' => $_SESSION['user_id']], 'enrolled_at DESC');
+$stmt = $conn->prepare("SELECT * FROM enrollments WHERE student_id = ? ORDER BY enrolled_at DESC");
+$stmt->execute([$_SESSION['user_id']]);
+$enrollments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $enrolled_courses = [];
 
 foreach ($enrollments as $enrollment) {
     // Get course info
-    $course = $conn->selectOne('courses', ['id' => $enrollment['course_id']]);
+    $stmt = $conn->prepare("SELECT * FROM courses WHERE id = ?");
+    $stmt->execute([$enrollment['course_id']]);
+    $course = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($course) {
         // Get instructor info
-        $instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+        $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$course['instructor_id']]);
+        $instructor = $stmt->fetch(PDO::FETCH_ASSOC);
         $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
         // Get video count
-        $course['video_count'] = $conn->count('videos', ['course_id' => $course['id']]);
+        $stmt = $conn->prepare("SELECT COUNT(*) as count FROM videos WHERE course_id = ?");
+        $stmt->execute([$course['id']]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $course['video_count'] = (int)$result['count'];
 
         // Add enrollment info
         $course['progress'] = $enrollment['progress'] ?? 0;
@@ -31,7 +40,9 @@ foreach ($enrollments as $enrollment) {
 }
 
 // Get available courses (not enrolled)
-$all_courses = $conn->select('courses', [], 'created_at DESC');
+$stmt = $conn->prepare("SELECT * FROM courses ORDER BY created_at DESC");
+$stmt->execute();
+$all_courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $enrolled_course_ids = array_column($enrollments, 'course_id');
 $available_courses = [];
 
@@ -39,11 +50,16 @@ $count = 0;
 foreach ($all_courses as $course) {
     if (!in_array($course['id'], $enrolled_course_ids) && $count < 6) {
         // Get instructor info
-        $instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+        $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$course['instructor_id']]);
+        $instructor = $stmt->fetch(PDO::FETCH_ASSOC);
         $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
         // Get video count
-        $course['video_count'] = $conn->count('videos', ['course_id' => $course['id']]);
+        $stmt = $conn->prepare("SELECT COUNT(*) as count FROM videos WHERE course_id = ?");
+        $stmt->execute([$course['id']]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $course['video_count'] = (int)$result['count'];
 
         $available_courses[] = $course;
         $count++;
@@ -51,16 +67,19 @@ foreach ($all_courses as $course) {
 }
 
 // Get recent video progress
-$video_progress_records = $conn->select('video_progress', ['student_id' => $_SESSION['user_id']], 'watched_at DESC');
+$stmt = $conn->prepare("SELECT * FROM video_progress WHERE student_id = ? ORDER BY watched_at DESC LIMIT 5");
+$stmt->execute([$_SESSION['user_id']]);
+$video_progress_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $recent_videos = [];
 
-$count = 0;
 foreach ($video_progress_records as $progress) {
-    if ($count >= 5) break;
-
-    $video = $conn->selectOne('videos', ['id' => $progress['video_id']]);
+    $stmt = $conn->prepare("SELECT * FROM videos WHERE id = ?");
+    $stmt->execute([$progress['video_id']]);
+    $video = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($video) {
-        $course = $conn->selectOne('courses', ['id' => $video['course_id']]);
+        $stmt = $conn->prepare("SELECT * FROM courses WHERE id = ?");
+        $stmt->execute([$video['course_id']]);
+        $course = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($course) {
             $video['course_title'] = $course['title'];
             $video['watched_duration'] = $progress['watched_duration'];
@@ -92,7 +111,7 @@ $active_tab = $_GET['tab'] ?? 'overview';
                 </a>
             </div>
             <div class="nav-links">
-                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
+                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Student'); ?></span>
                 <a href="logout.php" class="btn-secondary">Logout</a>
             </div>
         </div>

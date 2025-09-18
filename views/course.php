@@ -9,14 +9,18 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get course details
-$course = $conn->selectOne('courses', ['id' => $course_id]);
+$stmt = $conn->prepare("SELECT * FROM courses WHERE id = ?");
+$stmt->execute([$course_id]);
+$course = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$course) {
     header('Location: student-dashboard.php');
     exit();
 }
 
 // Get instructor details
-$instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->execute([$course['instructor_id']]);
+$instructor = $stmt->fetch(PDO::FETCH_ASSOC);
 $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
 // Check if user is enrolled (for students) or owns the course (for instructors)
@@ -24,7 +28,9 @@ $can_access = false;
 if (isInstructor() && $course['instructor_id'] == $_SESSION['user_id']) {
     $can_access = true;
 } elseif (isStudent()) {
-    $enrollment = $conn->selectOne('enrollments', ['student_id' => $_SESSION['user_id'], 'course_id' => $course_id]);
+    $stmt = $conn->prepare("SELECT * FROM enrollments WHERE student_id = ? AND course_id = ?");
+    $stmt->execute([$_SESSION['user_id'], $course_id]);
+    $enrollment = $stmt->fetch(PDO::FETCH_ASSOC);
     $can_access = $enrollment !== null;
 }
 
@@ -34,18 +40,24 @@ if (!$can_access) {
 }
 
 // Get course videos
-$videos = $conn->select('videos', ['course_id' => $course_id], 'order_number ASC');
+$stmt = $conn->prepare("SELECT * FROM videos WHERE course_id = ? ORDER BY order_number ASC");
+$stmt->execute([$course_id]);
+$videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get video progress (for students)
 $video_progress = [];
 if (isStudent()) {
-    $all_progress = $conn->select('video_progress', ['student_id' => $_SESSION['user_id']]);
+    // Get video progress for all videos in this course
+    $stmt = $conn->prepare("
+        SELECT vp.* 
+        FROM video_progress vp
+        JOIN videos v ON vp.video_id = v.id
+        WHERE vp.student_id = ? AND v.course_id = ?
+    ");
+    $stmt->execute([$_SESSION['user_id'], $course_id]);
+    $all_progress = $stmt->fetchAll(PDO::FETCH_ASSOC);
     foreach ($all_progress as $progress) {
-        // Check if this progress is for a video in this course
-        $video_check = $conn->selectOne('videos', ['id' => $progress['video_id'], 'course_id' => $course_id]);
-        if ($video_check) {
-            $video_progress[$progress['video_id']] = $progress;
-        }
+        $video_progress[$progress['video_id']] = $progress;
     }
 }
 
@@ -127,7 +139,7 @@ foreach ($videos as $video) {
             </div>
             <div class="nav-links">
                 <a href="<?php echo isInstructor() ? 'instructor-dashboard.php' : 'student-dashboard.php'; ?>">Dashboard</a>
-                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
+                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></span>
                 <a href="logout.php" class="btn-secondary">Logout</a>
             </div>
         </div>

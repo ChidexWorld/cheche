@@ -22,7 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conn = $database->getConnection();
 
                 // Check if user exists
-                $user = $conn->selectOne('users', ['email' => $email]);
+                $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+                $stmt->execute([$email]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($user) {
                     $show_password_form = true;
@@ -58,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Update password
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $conn->update('users', ['password' => $hashed_password], ['email' => $verified_email]);
+                $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+                $stmt->execute([$hashed_password, $verified_email]);
 
                 $message = 'Password updated successfully! You can now <a href="login.php">login</a> with your new password.';
             } catch (Exception $e) {
