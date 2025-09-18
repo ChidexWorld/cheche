@@ -120,13 +120,22 @@ try {
         $order_number
     ])) {
         $video_id = $conn->lastInsertId();
-        echo json_encode(['success' => true, 'message' => 'Video uploaded successfully', 'video_id' => $video_id]);
-    } else {
-        echo json_encode(['success' => true, 'message' => 'Video uploaded successfully', 'video_id' => $video_id]);
+        $_SESSION['success_message'] = 'Video uploaded successfully';
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Video uploaded successfully', 
+            'video_id' => $video_id,
+            'redirect' => '../instructor-dashboard.php?tab=courses&success=Video uploaded successfully'
+        ]);
     } else {
         // Clean up uploaded file if database insert fails
         unlink($upload_path);
-        echo json_encode(['success' => false, 'message' => 'Failed to save video information']);
+        $_SESSION['error_message'] = 'Failed to save video information';
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Failed to save video information',
+            'redirect' => '../instructor-dashboard.php?tab=courses&error=Failed to save video information'
+        ]);
     }
     
 } catch (Exception $e) {

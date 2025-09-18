@@ -39,8 +39,6 @@ try {
         $course_id = $db->lastInsertId();
         header('Location: ../instructor-dashboard.php?tab=courses&success=Course created successfully');
     } else {
-        header('Location: ../instructor-dashboard.php?tab=courses&success=Course created successfully');
-    } else {
         header('Location: ../instructor-dashboard.php?tab=create-course&error=Failed to create course');
     }
 } catch (Exception $e) {
