@@ -58,5 +58,14 @@
         "created_at": "2025-09-15 09:26:30",
         "updated_at": "2025-09-15 09:26:30",
         "id": 6
+    },
+    {
+        "title": "Test Course - 2025-09-23 00:03:34",
+        "description": "This is a test course created to verify the system works",
+        "instructor_id": 8,
+        "category": "Programming",
+        "price": 49.99,
+        "id": 7,
+        "created_at": "2025-09-23 00:03:34"
     }
 ]

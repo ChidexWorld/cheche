@@ -166,7 +166,12 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                             <span><?php echo round($course['progress'], 1); ?>% complete</span>
                                             <span><?php echo $course['video_count']; ?> videos</span>
                                         </div>
-                                        <a href="course.php?id=<?php echo $course['id']; ?>" class="btn-primary" style="margin-top: 1rem;">Continue</a>
+                                        <div style="margin-top: 1rem; display: flex; gap: 10px;">
+                                            <a href="course.php?id=<?php echo $course['id']; ?>" class="btn-primary">Continue</a>
+                                            <?php if ($course['video_count'] > 0): ?>
+                                                <a href="course-videos.php?id=<?php echo $course['id']; ?>" class="btn-primary" style="background: #28a745;">📹 Videos</a>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -225,6 +230,9 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                         
                                         <div style="margin-top: 1rem;">
                                             <a href="course.php?id=<?php echo $course['id']; ?>" class="btn-primary">View Course</a>
+                                            <?php if ($course['video_count'] > 0): ?>
+                                                <a href="course-videos.php?id=<?php echo $course['id']; ?>" class="btn-primary" style="margin-left: 10px; background: #28a745;">📹 Videos</a>
+                                            <?php endif; ?>
                                             <button onclick="showModal('unenroll-modal-<?php echo $course['id']; ?>')" class="btn-secondary" style="margin-left: 10px;">Leave Course</button>
                                         </div>
                                         

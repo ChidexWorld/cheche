@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/kingsley/scoop/apps/php/current/ext//**)",
+      "Read(//c/Users/kingsley/scoop/apps/php/current/ext/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

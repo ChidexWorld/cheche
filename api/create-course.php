@@ -22,24 +22,42 @@ if (empty($title)) {
 try {
     $database = new Database();
     $db = $database->getConnection();
-    
+
     // Create course in database
-    $stmt = $db->prepare("
-        INSERT INTO courses (title, description, instructor_id, category, price, created_at) 
-        VALUES (?, ?, ?, ?, ?, NOW())
-    ");
-    
-    if ($stmt->execute([
-        $title,
-        $description,
-        $_SESSION['user_id'],
-        $category,
-        $price
-    ])) {
-        $course_id = $db->lastInsertId();
-        header('Location: ../instructor-dashboard.php?tab=courses&success=Course created successfully');
-    } else {
-        header('Location: ../instructor-dashboard.php?tab=create-course&error=Failed to create course');
+    try {
+        $stmt = $db->prepare("
+            INSERT INTO courses (title, description, instructor_id, category, price, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ");
+
+        if ($stmt->execute([
+            $title,
+            $description,
+            $_SESSION['user_id'],
+            $category,
+            $price
+        ])) {
+            $course_id = $db->lastInsertId();
+            header('Location: ../instructor-dashboard.php?tab=courses&success=Course created successfully');
+        } else {
+            header('Location: ../instructor-dashboard.php?tab=create-course&error=Failed to create course');
+        }
+    } catch (Exception $e) {
+        // Fallback to file-based database
+        $course_data = [
+            'title' => $title,
+            'description' => $description,
+            'instructor_id' => $_SESSION['user_id'],
+            'category' => $category,
+            'price' => $price
+        ];
+
+        $course_id = $db->insert('courses', $course_data);
+        if ($course_id) {
+            header('Location: ../instructor-dashboard.php?tab=courses&success=Course created successfully');
+        } else {
+            header('Location: ../instructor-dashboard.php?tab=create-course&error=Failed to create course');
+        }
     }
 } catch (Exception $e) {
     header('Location: ../instructor-dashboard.php?tab=create-course&error=Failed to create course: ' . $e->getMessage());
