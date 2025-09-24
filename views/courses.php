@@ -40,6 +40,7 @@ foreach ($all_courses as $course) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>All Courses - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
 </head>
 <body>
     <nav class="navbar">
@@ -50,18 +51,27 @@ foreach ($all_courses as $course) {
                 </a>
             </div>
             <div class="nav-links">
-                <a href="index.php">Home</a>
-                <a href="#about">About</a>
-                <a href="login.php" class="btn-secondary">Login</a>
-                <a href="register.php" class="btn-primary">Get Started</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <a href="index.php" data-translate>Home</a>
+                <a href="#about" data-translate>About</a>
+                <a href="login.php" class="btn-secondary" data-translate>Login</a>
+                <a href="register.php" class="btn-primary" data-translate>Get Started</a>
             </div>
         </div>
     </nav>
 
     <section class="courses-preview" style="margin-top: 80px;">
         <div class="container">
-            <h1 style="text-align: center; margin-bottom: 2rem;">All Courses</h1>
-            <p style="text-align: center; margin-bottom: 3rem; color: #666;">
+            <h1 style="text-align: center; margin-bottom: 2rem;" data-translate>All Courses</h1>
+            <p style="text-align: center; margin-bottom: 3rem; color: #666;" data-translate>
                 Discover our complete collection of courses from expert instructors
             </p>
             
@@ -73,11 +83,11 @@ foreach ($all_courses as $course) {
                             <div class="course-content">
                                 <h3><?php echo htmlspecialchars($course['title']); ?></h3>
                                 <p><?php echo htmlspecialchars($course['description'] ?? 'Learn new skills with this comprehensive course.'); ?></p>
-                                <p><strong>Instructor:</strong> <?php echo htmlspecialchars($course['instructor_name']); ?></p>
+                                <p><strong data-translate>Instructor:</strong> <?php echo htmlspecialchars($course['instructor_name']); ?></p>
                                 
                                 <div class="course-meta">
-                                    <span><?php echo $course['video_count']; ?> videos</span>
-                                    <span><?php echo $course['enrollment_count']; ?> students</span>
+                                    <span><?php echo $course['video_count']; ?> <span data-translate>videos</span></span>
+                                    <span><?php echo $course['enrollment_count']; ?> <span data-translate>students</span></span>
                                     <?php if ($course['category']): ?>
                                         <span><?php echo htmlspecialchars($course['category']); ?></span>
                                     <?php endif; ?>
@@ -89,7 +99,7 @@ foreach ($all_courses as $course) {
                                     </div>
                                 <?php else: ?>
                                     <div style="margin: 1rem 0;">
-                                        <strong style="color: #28a745; font-size: 1.2rem;">Free</strong>
+                                        <strong style="color: #28a745; font-size: 1.2rem;" data-translate>Free</strong>
                                     </div>
                                 <?php endif; ?>
                                 
@@ -142,5 +152,6 @@ foreach ($all_courses as $course) {
     </footer>
 
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/language.js"></script>
 </body>
 </html>

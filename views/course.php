@@ -78,6 +78,7 @@ foreach ($videos as $video) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($course['title']); ?> - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
     <style>
         .course-layout {
             display: grid;
@@ -127,6 +128,74 @@ foreach ($videos as $video) {
                 margin-top: 80px;
             }
         }
+
+        /* Language Dropdown Styles */
+        .language-dropdown {
+            position: relative;
+            display: inline-block;
+            margin-right: 1rem;
+        }
+
+        .language-toggle {
+            background: #4a90e2 !important;
+            color: white !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 20px !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            transition: all 0.3s ease !important;
+            outline: none !important;
+        }
+
+        .language-toggle:hover {
+            background: #357abd !important;
+            transform: translateY(-2px);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: white !important;
+            min-width: 120px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2) !important;
+            border-radius: 8px !important;
+            z-index: 9999 !important;
+            overflow: hidden;
+            border: 1px solid #ddd !important;
+            margin-top: 5px;
+        }
+
+        .dropdown-content a {
+            color: #333 !important;
+            padding: 12px 16px !important;
+            text-decoration: none !important;
+            display: block !important;
+            transition: background-color 0.3s ease !important;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1 !important;
+        }
+
+        .dropdown-content.show {
+            display: block !important;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Ensure nav-links has proper flex display */
+        .nav-links {
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+        }
     </style>
 </head>
 <body>
@@ -138,9 +207,18 @@ foreach ($videos as $video) {
                 </a>
             </div>
             <div class="nav-links">
-                <a href="<?php echo isInstructor() ? 'instructor-dashboard.php' : 'student-dashboard.php'; ?>">Dashboard</a>
-                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></span>
-                <a href="logout.php" class="btn-secondary">Logout</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <a href="<?php echo isInstructor() ? 'instructor-dashboard.php' : 'student-dashboard.php'; ?>" data-translate>Dashboard</a>
+                <span><span data-translate>Welcome</span>, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></span>
+                <a href="logout.php" class="btn-secondary" data-translate>Logout</a>
             </div>
         </div>
     </nav>
@@ -181,8 +259,8 @@ foreach ($videos as $video) {
                             }
                             ?>
                             <source src="<?php echo htmlspecialchars($current_video['video_path']); ?>" type="<?php echo $mime_type; ?>">
-                            <p>Your browser does not support the video tag or this video format.</p>
-                            <p><a href="<?php echo htmlspecialchars($current_video['video_path']); ?>" target="_blank">Click here to download and watch the video</a></p>
+                            <p data-translate>Your browser does not support the video tag or this video format.</p>
+                            <p><a href="<?php echo htmlspecialchars($current_video['video_path']); ?>" target="_blank" data-translate>Click here to download and watch the video</a></p>
                         </video>
                     </div>
                     
@@ -194,23 +272,23 @@ foreach ($videos as $video) {
                         
                         <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center;">
                             <?php if (isStudent()): ?>
-                                <a href="<?php echo htmlspecialchars($current_video['video_path']); ?>" 
-                                   download="<?php echo htmlspecialchars($current_video['title']); ?>.mp4" 
+                                <a href="<?php echo htmlspecialchars($current_video['video_path']); ?>"
+                                   download="<?php echo htmlspecialchars($current_video['title']); ?>.mp4"
                                    class="btn-primary">
-                                    ⬇️ Download Video
+                                    ⬇️ <span data-translate>Download Video</span>
                                 </a>
                                 <?php if (isset($video_progress[$current_video['id']]) && $video_progress[$current_video['id']]['completed']): ?>
-                                    <span style="color: #28a745; font-weight: bold;">✅ Completed</span>
+                                    <span style="color: #28a745; font-weight: bold;">✅ <span data-translate>Completed</span></span>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
                 <?php else: ?>
                     <div class="video-info">
-                        <h2>No videos available</h2>
-                        <p>This course doesn't have any videos yet.</p>
+                        <h2 data-translate>No videos available</h2>
+                        <p data-translate>This course doesn't have any videos yet.</p>
                         <?php if (isInstructor()): ?>
-                            <a href="instructor-dashboard.php?tab=upload&course_id=<?php echo $course['id']; ?>" class="btn-primary">
+                            <a href="instructor-dashboard.php?tab=upload&course_id=<?php echo $course['id']; ?>" class="btn-primary" data-translate>
                                 Add Videos
                             </a>
                         <?php endif; ?>
@@ -223,11 +301,11 @@ foreach ($videos as $video) {
                     <h3><?php echo htmlspecialchars($course['title']); ?></h3>
                     <?php if (isInstructor()): ?>
                         <a href="instructor-dashboard.php?tab=upload&course_id=<?php echo $course['id']; ?>" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">
-                            + Add Video
+                            + <span data-translate>Add Video</span>
                         </a>
                     <?php endif; ?>
                 </div>
-                <p style="color: #666; margin-bottom: 1rem;">By <?php echo htmlspecialchars($course['instructor_name']); ?></p>
+                <p style="color: #666; margin-bottom: 1rem;"><span data-translate>By</span> <?php echo htmlspecialchars($course['instructor_name']); ?></p>
                 
                 <?php if ($videos): ?>
                     <div class="video-list">
@@ -241,7 +319,7 @@ foreach ($videos as $video) {
                                         <h4 style="margin: 0; font-size: 0.9rem;"><?php echo htmlspecialchars($video['title']); ?></h4>
                                         <?php if (isset($video_progress[$video['id']]) && $video_progress[$video['id']]['watched_duration'] > 0): ?>
                                             <small style="color: #888;">
-                                                Watched: <?php echo gmdate("i:s", $video_progress[$video['id']]['watched_duration']); ?>
+                                                <span data-translate>Watched</span>: <?php echo gmdate("i:s", $video_progress[$video['id']]['watched_duration']); ?>
                                             </small>
                                         <?php endif; ?>
                                     </div>
@@ -253,13 +331,14 @@ foreach ($videos as $video) {
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <p>No videos in this course yet.</p>
+                    <p data-translate>No videos in this course yet.</p>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/language.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const video = document.getElementById('mainVideo');
@@ -270,9 +349,9 @@ foreach ($videos as $video) {
                     const errorDiv = document.createElement('div');
                     errorDiv.style.cssText = 'background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; margin: 1rem 0;';
                     errorDiv.innerHTML = `
-                        <strong>Video playback error:</strong><br>
-                        This video format may not be supported by your browser.<br>
-                        <a href="${video.querySelector('source').src}" target="_blank" style="color: #1976d2;">Click here to download the video</a>
+                        <strong data-translate>Video playback error:</strong><br>
+                        <span data-translate>This video format may not be supported by your browser.</span><br>
+                        <a href="${video.querySelector('source').src}" target="_blank" style="color: #1976d2;" data-translate>Click here to download the video</a>
                     `;
                     video.parentNode.insertBefore(errorDiv, video.nextSibling);
                 });

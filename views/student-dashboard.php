@@ -101,6 +101,7 @@ $active_tab = $_GET['tab'] ?? 'overview';
     <title>Student Dashboard - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/modal.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
 </head>
 <body>
     <nav class="navbar">
@@ -111,8 +112,17 @@ $active_tab = $_GET['tab'] ?? 'overview';
                 </a>
             </div>
             <div class="nav-links">
-                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Student'); ?></span>
-                <a href="logout.php" class="btn-secondary">Logout</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <span><span data-translate>Welcome</span>, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Student'); ?></span>
+                <a href="logout.php" class="btn-secondary" data-translate>Logout</a>
             </div>
         </div>
     </nav>
@@ -120,56 +130,56 @@ $active_tab = $_GET['tab'] ?? 'overview';
     <div class="dashboard">
         <div class="dashboard-header">
             <div class="container">
-                <h1>Student Dashboard</h1>
-                <p>Continue your learning journey</p>
+                <h1 data-translate>Student Dashboard</h1>
+                <p data-translate>Continue your learning journey</p>
             </div>
         </div>
 
         <div class="container">
             <div class="dashboard-nav">
-                <a href="?tab=overview" class="<?php echo $active_tab === 'overview' ? 'active' : ''; ?>">Overview</a>
-                <a href="?tab=my-courses" class="<?php echo $active_tab === 'my-courses' ? 'active' : ''; ?>">My Courses</a>
-                <a href="?tab=browse" class="<?php echo $active_tab === 'browse' ? 'active' : ''; ?>">Browse Courses</a>
+                <a href="?tab=overview" class="<?php echo $active_tab === 'overview' ? 'active' : ''; ?>" data-translate>Overview</a>
+                <a href="?tab=my-courses" class="<?php echo $active_tab === 'my-courses' ? 'active' : ''; ?>" data-translate>My Courses</a>
+                <a href="?tab=browse" class="<?php echo $active_tab === 'browse' ? 'active' : ''; ?>" data-translate>Browse Courses</a>
             </div>
 
             <div class="dashboard-content">
                 <?php if ($active_tab === 'overview'): ?>
-                    <h2>Learning Overview</h2>
+                    <h2 data-translate>Learning Overview</h2>
                     <div class="stats" style="display: flex; gap: 2rem; margin-bottom: 2rem;">
                         <div class="stat">
                             <h3><?php echo count($enrolled_courses); ?></h3>
-                            <p>Enrolled Courses</p>
+                            <p data-translate>Enrolled Courses</p>
                         </div>
                         <div class="stat">
                             <h3><?php echo count($recent_videos); ?></h3>
-                            <p>Videos Watched</p>
+                            <p data-translate>Videos Watched</p>
                         </div>
                         <div class="stat">
                             <h3><?php echo round(array_sum(array_column($enrolled_courses, 'progress')) / max(count($enrolled_courses), 1), 1); ?>%</h3>
-                            <p>Average Progress</p>
+                            <p data-translate>Average Progress</p>
                         </div>
                     </div>
 
                     <?php if ($enrolled_courses): ?>
-                        <h3>Continue Learning</h3>
+                        <h3 data-translate>Continue Learning</h3>
                         <div class="courses-grid">
                             <?php foreach (array_slice($enrolled_courses, 0, 3) as $course): ?>
                                 <div class="course-card">
                                     <div class="course-thumbnail">📚 Course</div>
                                     <div class="course-content">
                                         <h4><?php echo htmlspecialchars($course['title']); ?></h4>
-                                        <p>By <?php echo htmlspecialchars($course['instructor_name']); ?></p>
+                                        <p><span data-translate>By</span> <?php echo htmlspecialchars($course['instructor_name']); ?></p>
                                         <div class="progress-bar" style="background: #f0f0f0; border-radius: 10px; height: 8px; margin: 10px 0;">
                                             <div style="width: <?php echo $course['progress']; ?>%; height: 100%; background: #4a90e2; border-radius: 10px;"></div>
                                         </div>
                                         <div class="course-meta">
-                                            <span><?php echo round($course['progress'], 1); ?>% complete</span>
-                                            <span><?php echo $course['video_count']; ?> videos</span>
+                                            <span><?php echo round($course['progress'], 1); ?>% <span data-translate>complete</span></span>
+                                            <span><?php echo $course['video_count']; ?> <span data-translate>videos</span></span>
                                         </div>
                                         <div style="margin-top: 1rem; display: flex; gap: 10px;">
-                                            <a href="course.php?id=<?php echo $course['id']; ?>" class="btn-primary">Continue</a>
+                                            <a href="course.php?id=<?php echo $course['id']; ?>" class="btn-primary" data-translate>Continue</a>
                                             <?php if ($course['video_count'] > 0): ?>
-                                                <a href="course-videos.php?id=<?php echo $course['id']; ?>" class="btn-primary" style="background: #28a745;">📹 Videos</a>
+                                                <a href="course-videos.php?id=<?php echo $course['id']; ?>" class="btn-primary" style="background: #28a745;">📹 <span data-translate>Videos</span></a>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -178,12 +188,12 @@ $active_tab = $_GET['tab'] ?? 'overview';
                         </div>
                     <?php else: ?>
                         <div class="alert alert-info" style="background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;">
-                            You haven't enrolled in any courses yet. <a href="?tab=browse">Browse available courses</a> to get started!
+                            <span data-translate>You haven't enrolled in any courses yet.</span> <a href="?tab=browse" data-translate>Browse available courses</a> <span data-translate>to get started!</span>
                         </div>
                     <?php endif; ?>
 
                     <?php if ($recent_videos): ?>
-                        <h3>Recent Videos</h3>
+                        <h3 data-translate>Recent Videos</h3>
                         <div class="courses-grid">
                             <?php foreach ($recent_videos as $video): ?>
                                 <div class="course-card">
@@ -196,9 +206,9 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                     </div>
                                     <div class="course-content">
                                         <h4><?php echo htmlspecialchars($video['title']); ?></h4>
-                                        <p>Course: <?php echo htmlspecialchars($video['course_title']); ?></p>
+                                        <p><span data-translate>Course:</span> <?php echo htmlspecialchars($video['course_title']); ?></p>
                                         <?php if ($video['watched_duration'] > 0): ?>
-                                            <small>Watched: <?php echo gmdate("H:i:s", $video['watched_duration']); ?></small>
+                                            <small><span data-translate>Watched:</span> <?php echo gmdate("H:i:s", $video['watched_duration']); ?></small>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -224,14 +234,14 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                         </div>
                                         
                                         <div class="course-meta">
-                                            <span><?php echo round($course['progress'], 1); ?>% complete</span>
-                                            <span><?php echo $course['video_count']; ?> videos</span>
+                                            <span><?php echo round($course['progress'], 1); ?>% <span data-translate>complete</span></span>
+                                            <span><?php echo $course['video_count']; ?> <span data-translate>videos</span></span>
                                         </div>
                                         
                                         <div style="margin-top: 1rem;">
                                             <a href="course.php?id=<?php echo $course['id']; ?>" class="btn-primary">View Course</a>
                                             <?php if ($course['video_count'] > 0): ?>
-                                                <a href="course-videos.php?id=<?php echo $course['id']; ?>" class="btn-primary" style="margin-left: 10px; background: #28a745;">📹 Videos</a>
+                                                <a href="course-videos.php?id=<?php echo $course['id']; ?>" class="btn-primary" style="margin-left: 10px; background: #28a745;">📹 <span data-translate>Videos</span></a>
                                             <?php endif; ?>
                                             <button onclick="showModal('unenroll-modal-<?php echo $course['id']; ?>')" class="btn-secondary" style="margin-left: 10px;">Leave Course</button>
                                         </div>
@@ -248,7 +258,7 @@ $active_tab = $_GET['tab'] ?? 'overview';
                         </div>
                     <?php else: ?>
                         <div class="alert alert-info" style="background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;">
-                            You haven't enrolled in any courses yet. <a href="?tab=browse">Browse available courses</a> to get started!
+                            <span data-translate>You haven't enrolled in any courses yet.</span> <a href="?tab=browse" data-translate>Browse available courses</a> <span data-translate>to get started!</span>
                         </div>
                     <?php endif; ?>
 
@@ -266,7 +276,7 @@ $active_tab = $_GET['tab'] ?? 'overview';
                                         <p><strong>Instructor:</strong> <?php echo htmlspecialchars($course['instructor_name']); ?></p>
                                         
                                         <div class="course-meta">
-                                            <span><?php echo $course['video_count']; ?> videos</span>
+                                            <span><?php echo $course['video_count']; ?> <span data-translate>videos</span></span>
                                             <?php if ($course['category']): ?>
                                                 <span><?php echo htmlspecialchars($course['category']); ?></span>
                                             <?php endif; ?>
@@ -341,5 +351,6 @@ $active_tab = $_GET['tab'] ?? 'overview';
 
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/modal.js"></script>
+    <script src="../assets/js/language.js"></script>
 </body>
 </html>

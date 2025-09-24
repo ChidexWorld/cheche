@@ -130,6 +130,7 @@ foreach ($courses as $course) {
     <title>Instructor Dashboard - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/modal.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
 </head>
 <body>
     <nav class="navbar">
@@ -140,8 +141,17 @@ foreach ($courses as $course) {
                 </a>
             </div>
             <div class="nav-links">
-                <span>Welcome, <?php echo htmlspecialchars($instructor['full_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Instructor'); ?></span>
-                <a href="../logout.php" class="btn-secondary">Logout</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <span><span data-translate>Welcome</span>, <?php echo htmlspecialchars($instructor['full_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Instructor'); ?></span>
+                <a href="../logout.php" class="btn-secondary" data-translate>Logout</a>
             </div>
         </div>
     </nav>
@@ -149,8 +159,8 @@ foreach ($courses as $course) {
     <div class="dashboard">
         <div class="dashboard-header">
             <div class="container">
-                <h1>Instructor Dashboard</h1>
-                <p>Manage your courses and track student progress</p>
+                <h1 data-translate>Instructor Dashboard</h1>
+                <p data-translate>Manage your courses and track student progress</p>
             </div>
         </div>
 
@@ -168,28 +178,28 @@ foreach ($courses as $course) {
             <?php endif; ?>
 
             <div class="dashboard-nav">
-                <a href="?tab=overview" class="<?php echo $active_tab === 'overview' ? 'active' : ''; ?>">Overview</a>
-                <a href="?tab=courses" class="<?php echo $active_tab === 'courses' ? 'active' : ''; ?>">My Courses</a>
-                <a href="?tab=upload" class="<?php echo $active_tab === 'upload' ? 'active' : ''; ?>">Upload Video</a>
-                <a href="?tab=create" class="<?php echo $active_tab === 'create' ? 'active' : ''; ?>">Create Course</a>
+                <a href="?tab=overview" class="<?php echo $active_tab === 'overview' ? 'active' : ''; ?>" data-translate>Overview</a>
+                <a href="?tab=courses" class="<?php echo $active_tab === 'courses' ? 'active' : ''; ?>" data-translate>My Courses</a>
+                <a href="?tab=upload" class="<?php echo $active_tab === 'upload' ? 'active' : ''; ?>" data-translate>Upload Video</a>
+                <a href="?tab=create" class="<?php echo $active_tab === 'create' ? 'active' : ''; ?>" data-translate>Create Course</a>
             </div>
 
             <div class="dashboard-content">
 
                 <?php if ($active_tab === 'overview'): ?>
-                    <h2>Teaching Overview</h2>
+                    <h2 data-translate>Teaching Overview</h2>
                     <div class="stats" style="display: flex; gap: 2rem; margin-bottom: 2rem;">
                         <div class="stat">
                             <h3><?php echo $total_courses; ?></h3>
-                            <p>Total Courses</p>
+                            <p data-translate>Total Courses</p>
                         </div>
                         <div class="stat">
                             <h3><?php echo $total_students; ?></h3>
-                            <p>Total Students</p>
+                            <p data-translate>Total Students</p>
                         </div>
                         <div class="stat">
                             <h3><?php echo $total_videos; ?></h3>
-                            <p>Total Videos</p>
+                            <p data-translate>Total Videos</p>
                         </div>
                     </div>
 
@@ -294,5 +304,6 @@ foreach ($courses as $course) {
 
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/modal.js"></script>
+    <script src="../assets/js/language.js"></script>
 </body>
 </html>

@@ -79,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
 </head>
 <body>
     <nav class="navbar">
@@ -89,8 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </a>
             </div>
             <div class="nav-links">
-                <a href="index.php">Home</a>
-                <a href="login.php" class="btn-secondary">Login</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <a href="index.php" data-translate>Home</a>
+                <a href="login.php" class="btn-secondary" data-translate>Login</a>
             </div>
         </div>
     </nav>
@@ -154,5 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/language.js"></script>
 </body>
 </html>
