@@ -90,6 +90,44 @@ foreach ($video_progress_records as $progress) {
     }
 }
 
+// Get student's certificates
+$stmt = $conn->prepare("
+    SELECT c.*, co.title as course_title, co.description as course_description
+    FROM certificates c
+    JOIN courses co ON c.course_id = co.id
+    WHERE c.student_id = ?
+    ORDER BY c.issued_at DESC
+");
+$stmt->execute([$_SESSION['user_id']]);
+$certificates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get available quizzes for enrolled courses
+$available_quizzes = [];
+foreach ($enrolled_courses as $course) {
+    $stmt = $conn->prepare("SELECT * FROM quizzes WHERE course_id = ? AND is_active = 1");
+    $stmt->execute([$course['id']]);
+    $quizzes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($quizzes as $quiz) {
+        // Get student's attempts for this quiz
+        $stmt = $conn->prepare("
+            SELECT * FROM quiz_attempts
+            WHERE student_id = ? AND quiz_id = ?
+            ORDER BY attempt_number DESC
+        ");
+        $stmt->execute([$_SESSION['user_id'], $quiz['id']]);
+        $attempts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $quiz['course_title'] = $course['title'];
+        $quiz['attempts'] = $attempts;
+        $quiz['remaining_attempts'] = max(0, $quiz['max_attempts'] - count($attempts));
+        $quiz['best_score'] = $attempts ? max(array_column($attempts, 'score')) : 0;
+        $quiz['passed'] = $attempts ? max(array_column($attempts, 'passed')) : false;
+
+        $available_quizzes[] = $quiz;
+    }
+}
+
 $active_tab = $_GET['tab'] ?? 'overview';
 ?>
 
@@ -140,6 +178,7 @@ $active_tab = $_GET['tab'] ?? 'overview';
                 <a href="?tab=overview" class="<?php echo $active_tab === 'overview' ? 'active' : ''; ?>" data-translate>Overview</a>
                 <a href="?tab=my-courses" class="<?php echo $active_tab === 'my-courses' ? 'active' : ''; ?>" data-translate>My Courses</a>
                 <a href="?tab=browse" class="<?php echo $active_tab === 'browse' ? 'active' : ''; ?>" data-translate>Browse Courses</a>
+                <a href="?tab=certificates" class="<?php echo $active_tab === 'certificates' ? 'active' : ''; ?>" data-translate>🏆 Certificates</a>
             </div>
 
             <div class="dashboard-content">
@@ -294,6 +333,140 @@ $active_tab = $_GET['tab'] ?? 'overview';
                     <?php else: ?>
                         <p>No new courses available at the moment. Check back later for new content!</p>
                     <?php endif; ?>
+
+                <?php elseif ($active_tab === 'certificates'): ?>
+                    <h2 data-translate>🏆 My Certificates</h2>
+
+                    <?php if ($certificates): ?>
+                        <div class="certificates-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+                            <?php foreach ($certificates as $certificate): ?>
+                                <div class="certificate-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                        🏆
+                                    </div>
+
+                                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">Certificate of Completion</h3>
+                                    <h4 style="margin: 0 0 1rem 0; opacity: 0.9;"><?php echo htmlspecialchars($certificate['course_title']); ?></h4>
+
+                                    <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                                        <p style="margin: 0; font-size: 0.9rem;">Certificate #<?php echo htmlspecialchars($certificate['certificate_number']); ?></p>
+                                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">Issued: <?php echo date('M d, Y', strtotime($certificate['issued_at'])); ?></p>
+                                        <?php if ($certificate['quiz_score']): ?>
+                                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">Quiz Score: <?php echo number_format($certificate['quiz_score'], 1); ?>%</p>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <a href="certificate.php?id=<?php echo $certificate['id']; ?>" class="btn" style="background: white; color: #667eea; margin-top: 1rem; display: inline-block; text-decoration: none; padding: 0.5rem 1rem; border-radius: 5px; font-weight: bold;">
+                                        View Certificate
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Available Quizzes and Certificate Generation -->
+                    <?php if ($available_quizzes): ?>
+                        <h3 data-translate>📝 Available Quizzes</h3>
+                        <div class="quizzes-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                            <?php foreach ($available_quizzes as $quiz): ?>
+                                <div class="quiz-card" style="background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                                    <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 1rem;">
+                                        <div style="flex: 1;">
+                                            <h4 style="margin: 0 0 0.5rem 0;"><?php echo htmlspecialchars($quiz['title']); ?></h4>
+                                            <p style="margin: 0; color: #666; font-size: 0.9rem;"><?php echo htmlspecialchars($quiz['course_title']); ?></p>
+                                        </div>
+                                        <?php if ($quiz['passed']): ?>
+                                            <span style="background: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 15px; font-size: 0.8rem;">✅ Passed</span>
+                                        <?php elseif ($quiz['remaining_attempts'] == 0): ?>
+                                            <span style="background: #dc3545; color: white; padding: 0.25rem 0.5rem; border-radius: 15px; font-size: 0.8rem;">❌ Failed</span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+                                            <div><strong>Passing Score:</strong> <?php echo $quiz['passing_score']; ?>%</div>
+                                            <div><strong>Time Limit:</strong> <?php echo $quiz['time_limit']; ?> min</div>
+                                            <div><strong>Remaining Attempts:</strong> <?php echo $quiz['remaining_attempts']; ?></div>
+                                            <?php if ($quiz['best_score'] > 0): ?>
+                                                <div><strong>Best Score:</strong> <?php echo number_format($quiz['best_score'], 1); ?>%</div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <?php if ($quiz['remaining_attempts'] > 0): ?>
+                                            <a href="quiz.php?id=<?php echo $quiz['id']; ?>" class="btn-primary" style="text-decoration: none;">
+                                                <?php echo count($quiz['attempts']) > 0 ? 'Retake Quiz' : 'Take Quiz'; ?>
+                                            </a>
+                                        <?php endif; ?>
+
+                                        <?php if ($quiz['passed']): ?>
+                                            <button onclick="generateCertificate(<?php echo $quiz['course_id']; ?>)" class="btn-success" style="background: #28a745;">
+                                                🏆 Get Certificate
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Courses Ready for Certificate (completed without quiz) -->
+                    <?php
+                    $certificate_ready_courses = [];
+                    foreach ($enrolled_courses as $course) {
+                        if ($course['progress'] >= 80) { // 80% completion required
+                            // Check if course has quiz
+                            $has_quiz = false;
+                            foreach ($available_quizzes as $quiz) {
+                                if ($quiz['course_id'] == $course['id']) {
+                                    $has_quiz = true;
+                                    break;
+                                }
+                            }
+
+                            // Check if already has certificate
+                            $has_certificate = false;
+                            foreach ($certificates as $cert) {
+                                if ($cert['course_id'] == $course['id']) {
+                                    $has_certificate = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$has_quiz && !$has_certificate) {
+                                $certificate_ready_courses[] = $course;
+                            }
+                        }
+                    }
+                    ?>
+
+                    <?php if ($certificate_ready_courses): ?>
+                        <h3 data-translate>🎓 Ready for Certificate</h3>
+                        <div class="ready-certificates-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                            <?php foreach ($certificate_ready_courses as $course): ?>
+                                <div class="course-card" style="background: white; border: 2px solid #28a745; border-radius: 10px; padding: 1.5rem;">
+                                    <h4 style="margin: 0 0 1rem 0; color: #28a745;"><?php echo htmlspecialchars($course['title']); ?></h4>
+                                    <p style="margin: 0 0 1rem 0; color: #666;">Course completion: <?php echo number_format($course['progress'], 1); ?>%</p>
+                                    <div style="background: #d4edda; color: #155724; padding: 0.75rem; border-radius: 5px; margin-bottom: 1rem; font-size: 0.9rem;">
+                                        🎉 Congratulations! You've completed this course and are eligible for a certificate.
+                                    </div>
+                                    <button onclick="generateCertificate(<?php echo $course['id']; ?>)" class="btn-success" style="background: #28a745;">
+                                        🏆 Generate Certificate
+                                    </button>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (empty($certificates) && empty($available_quizzes) && empty($certificate_ready_courses)): ?>
+                        <div class="alert alert-info" style="background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 1rem; border-radius: 5px; text-align: center;">
+                            <h4>No certificates available yet</h4>
+                            <p>Complete courses and pass quizzes to earn certificates. Enroll in courses and start learning!</p>
+                            <a href="?tab=browse" class="btn-primary" style="margin-top: 1rem;">Browse Courses</a>
+                        </div>
+                    <?php endif; ?>
+
                 <?php endif; ?>
             </div>
         </div>
@@ -352,5 +525,37 @@ $active_tab = $_GET['tab'] ?? 'overview';
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/modal.js"></script>
     <script src="../assets/js/language.js"></script>
+
+    <script>
+        async function generateCertificate(courseId) {
+            if (!confirm('Generate your certificate for this course?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('../api/generate-certificate.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        course_id: courseId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message || 'Certificate generated successfully!');
+                    location.reload(); // Reload to show the new certificate
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error generating certificate:', error);
+                alert('Failed to generate certificate. Please try again.');
+            }
+        }
+    </script>
 </body>
 </html>

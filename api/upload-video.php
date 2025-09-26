@@ -141,8 +141,32 @@ try {
     }
 
     if ($video_id) {
-        $_SESSION['success_message'] = 'Video uploaded successfully';
-        header('Location: ../instructor-dashboard.php?tab=courses&success=Video uploaded successfully');
+        // Handle subtitle upload if provided
+        $subtitle_message = '';
+        if (isset($_FILES['subtitle_file']) && $_FILES['subtitle_file']['error'] === UPLOAD_ERR_OK) {
+            try {
+                require_once '../config/subtitle-processor.php';
+                $processor = new SubtitleProcessor($database);
+
+                $subtitle_id = $processor->uploadSubtitle($video_id, $_FILES['subtitle_file']);
+
+                // Start background translation and merge process
+                try {
+                    $processor->translateSubtitleFile($subtitle_id);
+                    $processor->mergeSubtitleWithVideo($subtitle_id);
+                    $subtitle_message = ' with Igbo subtitles';
+                } catch (Exception $e) {
+                    error_log('Subtitle processing error: ' . $e->getMessage());
+                    $subtitle_message = ' (subtitle processing in progress)';
+                }
+            } catch (Exception $e) {
+                error_log('Subtitle upload error: ' . $e->getMessage());
+                $subtitle_message = ' (subtitle upload failed)';
+            }
+        }
+
+        $_SESSION['success_message'] = 'Video uploaded successfully' . $subtitle_message;
+        header('Location: ../instructor-dashboard.php?tab=courses&success=Video uploaded successfully' . urlencode($subtitle_message));
         exit();
     } else {
         // Clean up uploaded file if database insert fails

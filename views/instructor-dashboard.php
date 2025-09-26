@@ -10,6 +10,63 @@ $db = $database->getConnection();
 // Initialize variables
 $success_message = $_SESSION["success_message"] ?? "";
 $error_message = $_SESSION["error_message"] ?? "";
+// Get instructor's quizzes
+$instructor_quizzes = [];
+foreach ($courses as $course) {
+    try {
+        $stmt = $db->prepare("SELECT * FROM quizzes WHERE course_id = ? ORDER BY created_at DESC");
+        $stmt->execute([$course['id']]);
+        $quizzes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($quizzes as $quiz) {
+            $quiz['course_title'] = $course['title'];
+
+            // Get quiz statistics
+            $stmt = $db->prepare("SELECT COUNT(*) as total_attempts FROM quiz_attempts WHERE quiz_id = ?");
+            $stmt->execute([$quiz['id']]);
+            $attempt_stats = $stmt->fetch(PDO::FETCH_ASSOC);
+            $quiz['total_attempts'] = (int)$attempt_stats['total_attempts'];
+
+            $stmt = $db->prepare("SELECT COUNT(DISTINCT student_id) as unique_students FROM quiz_attempts WHERE quiz_id = ?");
+            $stmt->execute([$quiz['id']]);
+            $student_stats = $stmt->fetch(PDO::FETCH_ASSOC);
+            $quiz['unique_students'] = (int)$student_stats['unique_students'];
+
+            $stmt = $db->prepare("SELECT AVG(score) as avg_score FROM quiz_attempts WHERE quiz_id = ? AND completed_at IS NOT NULL");
+            $stmt->execute([$quiz['id']]);
+            $score_stats = $stmt->fetch(PDO::FETCH_ASSOC);
+            $quiz['avg_score'] = floatval($score_stats['avg_score'] ?? 0);
+
+            $instructor_quizzes[] = $quiz;
+        }
+    } catch (Exception $e) {
+        // Skip if tables don't exist yet
+    }
+}
+
+// Get certificates issued for instructor's courses
+$instructor_certificates = [];
+foreach ($courses as $course) {
+    try {
+        $stmt = $db->prepare("
+            SELECT c.*, u.full_name as student_name
+            FROM certificates c
+            JOIN users u ON c.student_id = u.id
+            WHERE c.course_id = ?
+            ORDER BY c.issued_at DESC
+        ");
+        $stmt->execute([$course['id']]);
+        $certificates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($certificates as $certificate) {
+            $certificate['course_title'] = $course['title'];
+            $instructor_certificates[] = $certificate;
+        }
+    } catch (Exception $e) {
+        // Skip if tables don't exist yet
+    }
+}
+
 $active_tab = $_GET["tab"] ?? "overview";
 
 // Clear session messages
@@ -182,6 +239,8 @@ foreach ($courses as $course) {
                 <a href="?tab=courses" class="<?php echo $active_tab === 'courses' ? 'active' : ''; ?>" data-translate>My Courses</a>
                 <a href="?tab=upload" class="<?php echo $active_tab === 'upload' ? 'active' : ''; ?>" data-translate>Upload Video</a>
                 <a href="?tab=create" class="<?php echo $active_tab === 'create' ? 'active' : ''; ?>" data-translate>Create Course</a>
+                <a href="?tab=quizzes" class="<?php echo $active_tab === 'quizzes' ? 'active' : ''; ?>" data-translate>📝 Quizzes</a>
+                <a href="?tab=certificates" class="<?php echo $active_tab === 'certificates' ? 'active' : ''; ?>" data-translate>🏆 Certificates</a>
             </div>
 
             <div class="dashboard-content">
@@ -236,8 +295,9 @@ foreach ($courses as $course) {
                                     <div class="course-content">
                                         <h4><?php echo htmlspecialchars($video['title']); ?></h4>
                                         <p>Course: <?php echo htmlspecialchars($video['course_title']); ?></p>
-                                        <div style="margin-top: 1rem;">
-                                            <a href="course.php?id=<?php echo $video['course_id']; ?>" class="btn-primary">View Course</a>
+                                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                            <a href="course.php?id=<?php echo $video['course_id']; ?>" class="btn-primary" style="font-size: 0.8rem;">View Course</a>
+                                            <a href="manage-subtitles.php?video_id=<?php echo $video['id']; ?>" class="btn-secondary" style="font-size: 0.8rem;">📝 Subtitles</a>
                                         </div>
                                     </div>
                                 </div>
@@ -297,6 +357,148 @@ foreach ($courses as $course) {
                     <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <?php include 'create-course-form.php'; ?>
                     </div>
+
+                <?php elseif ($active_tab === 'quizzes'): ?>
+                    <h2>📝 Quiz Management</h2>
+
+                    <!-- Create New Quiz Section -->
+                    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+                        <h3>Create New Quiz</h3>
+                        <form id="create-quiz-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label>Course:</label>
+                                <select name="course_id" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="">Select a course</option>
+                                    <?php foreach ($courses as $course): ?>
+                                        <option value="<?php echo $course['id']; ?>"><?php echo htmlspecialchars($course['title']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Quiz Title:</label>
+                                <input type="text" name="title" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" placeholder="e.g., Final Assessment">
+                            </div>
+                            <div style="grid-column: 1 / -1;">
+                                <label>Description:</label>
+                                <textarea name="description" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" rows="3" placeholder="Quiz description..."></textarea>
+                            </div>
+                            <div>
+                                <label>Passing Score (%):</label>
+                                <input type="number" name="passing_score" value="70" min="0" max="100" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label>Max Attempts:</label>
+                                <input type="number" name="max_attempts" value="3" min="1" max="10" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label>Time Limit (minutes):</label>
+                                <input type="number" name="time_limit" value="30" min="5" max="180" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div style="grid-column: 1 / -1;">
+                                <button type="submit" class="btn-primary">Create Quiz</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Existing Quizzes -->
+                    <?php if ($instructor_quizzes): ?>
+                        <h3>Your Quizzes</h3>
+                        <div class="quizzes-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+                            <?php foreach ($instructor_quizzes as $quiz): ?>
+                                <div class="quiz-card" style="background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                                    <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 1rem;">
+                                        <div style="flex: 1;">
+                                            <h4 style="margin: 0 0 0.5rem 0;"><?php echo htmlspecialchars($quiz['title']); ?></h4>
+                                            <p style="margin: 0; color: #666; font-size: 0.9rem;"><?php echo htmlspecialchars($quiz['course_title']); ?></p>
+                                        </div>
+                                        <span style="background: <?php echo $quiz['is_active'] ? '#28a745' : '#6c757d'; ?>; color: white; padding: 0.25rem 0.5rem; border-radius: 15px; font-size: 0.8rem;">
+                                            <?php echo $quiz['is_active'] ? 'Active' : 'Inactive'; ?>
+                                        </span>
+                                    </div>
+
+                                    <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+                                            <div><strong>Passing Score:</strong> <?php echo $quiz['passing_score']; ?>%</div>
+                                            <div><strong>Time Limit:</strong> <?php echo $quiz['time_limit']; ?> min</div>
+                                            <div><strong>Total Attempts:</strong> <?php echo $quiz['total_attempts']; ?></div>
+                                            <div><strong>Unique Students:</strong> <?php echo $quiz['unique_students']; ?></div>
+                                        </div>
+                                        <?php if ($quiz['avg_score'] > 0): ?>
+                                            <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                                                <strong>Average Score:</strong> <?php echo number_format($quiz['avg_score'], 1); ?>%
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <button onclick="addQuestionModal(<?php echo $quiz['id']; ?>)" class="btn-primary" style="font-size: 0.9rem;">Add Question</button>
+                                        <button onclick="viewQuizStats(<?php echo $quiz['id']; ?>)" class="btn-secondary" style="font-size: 0.9rem;">View Stats</button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div style="text-align: center; padding: 2rem; background: #f8f9fa; border-radius: 8px;">
+                            <h4>No quizzes created yet</h4>
+                            <p>Create your first quiz to test your students' knowledge.</p>
+                        </div>
+                    <?php endif; ?>
+
+                <?php elseif ($active_tab === 'certificates'): ?>
+                    <h2>🏆 Certificates Issued</h2>
+
+                    <?php if ($instructor_certificates): ?>
+                        <div class="certificates-table" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead style="background: #f8f9fa;">
+                                    <tr>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Student</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Course</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Certificate #</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Quiz Score</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Issued Date</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($instructor_certificates as $certificate): ?>
+                                        <tr style="border-bottom: 1px solid #eee;">
+                                            <td style="padding: 1rem;"><?php echo htmlspecialchars($certificate['student_name']); ?></td>
+                                            <td style="padding: 1rem;"><?php echo htmlspecialchars($certificate['course_title']); ?></td>
+                                            <td style="padding: 1rem; font-family: monospace;"><?php echo htmlspecialchars($certificate['certificate_number']); ?></td>
+                                            <td style="padding: 1rem;">
+                                                <?php if ($certificate['quiz_score']): ?>
+                                                    <?php echo number_format($certificate['quiz_score'], 1); ?>%
+                                                <?php else: ?>
+                                                    <span style="color: #666;">No quiz</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="padding: 1rem;"><?php echo date('M d, Y', strtotime($certificate['issued_at'])); ?></td>
+                                            <td style="padding: 1rem;">
+                                                <a href="certificate.php?id=<?php echo $certificate['id']; ?>" class="btn-primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; text-decoration: none;">
+                                                    View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="margin-top: 2rem; padding: 1rem; background: #d1ecf1; border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: #0c5460;">Certificate Statistics</h4>
+                            <p style="margin: 0; color: #0c5460;">
+                                <strong><?php echo count($instructor_certificates); ?></strong> certificates issued across
+                                <strong><?php echo count(array_unique(array_column($instructor_certificates, 'course_id'))); ?></strong> courses
+                            </p>
+                        </div>
+                    <?php else: ?>
+                        <div style="text-align: center; padding: 2rem; background: #f8f9fa; border-radius: 8px;">
+                            <h4>No certificates issued yet</h4>
+                            <p>Students will receive certificates when they complete courses and pass quizzes.</p>
+                        </div>
+                    <?php endif; ?>
+
                 <?php endif; ?>
             </div>
         </div>
@@ -305,5 +507,107 @@ foreach ($courses as $course) {
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/modal.js"></script>
     <script src="../assets/js/language.js"></script>
+
+    <script>
+        // Quiz management functions
+        document.addEventListener('DOMContentLoaded', function() {
+            const createQuizForm = document.getElementById('create-quiz-form');
+            if (createQuizForm) {
+                createQuizForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this);
+                    const data = Object.fromEntries(formData.entries());
+
+                    try {
+                        const response = await fetch('../api/create-quiz.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            alert('Quiz created successfully!');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + result.error);
+                        }
+                    } catch (error) {
+                        console.error('Error creating quiz:', error);
+                        alert('Failed to create quiz. Please try again.');
+                    }
+                });
+            }
+        });
+
+        async function addQuestionModal(quizId) {
+            const questionText = prompt('Enter question text:');
+            if (!questionText) return;
+
+            const questionType = prompt('Enter question type (multiple_choice, true_false, or short_answer):', 'multiple_choice');
+            if (!questionType) return;
+
+            const points = prompt('Enter points for this question:', '1');
+            if (!points) return;
+
+            let options = [];
+            if (questionType === 'multiple_choice') {
+                const numOptions = parseInt(prompt('How many options?', '4'));
+                for (let i = 0; i < numOptions; i++) {
+                    const optionText = prompt(`Enter option ${i + 1}:`);
+                    if (optionText) {
+                        const isCorrect = confirm(`Is "${optionText}" the correct answer?`);
+                        options.push({
+                            text: optionText,
+                            is_correct: isCorrect
+                        });
+                    }
+                }
+            } else if (questionType === 'true_false') {
+                const correctAnswer = confirm('Is the correct answer TRUE? (Cancel for FALSE)');
+                options = [
+                    { text: 'True', is_correct: correctAnswer },
+                    { text: 'False', is_correct: !correctAnswer }
+                ];
+            }
+
+            try {
+                const response = await fetch('../api/add-quiz-question.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        quiz_id: quizId,
+                        question_text: questionText,
+                        question_type: questionType,
+                        points: parseFloat(points),
+                        options: options
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Question added successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error adding question:', error);
+                alert('Failed to add question. Please try again.');
+            }
+        }
+
+        function viewQuizStats(quizId) {
+            // Simple implementation - could be expanded to show detailed stats
+            alert('Quiz stats feature coming soon!');
+        }
+    </script>
 </body>
 </html>

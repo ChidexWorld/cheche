@@ -228,6 +228,20 @@ foreach ($videos as $video) {
             <div class="video-section">
                 <?php if ($current_video): ?>
                     <div class="video-player">
+                        <?php
+                        // Check for merged video with subtitles
+                        $stmt = $conn->prepare("SELECT * FROM subtitles WHERE video_id = ? AND merge_status = 'completed'");
+                        $stmt->execute([$current_video['id']]);
+                        $subtitle_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        // Use merged video if available, otherwise use original
+                        $video_source = $subtitle_info && $subtitle_info['merged_video_path'] && file_exists($subtitle_info['merged_video_path'])
+                            ? $subtitle_info['merged_video_path']
+                            : $current_video['video_path'];
+
+                        $has_igbo_subtitles = $subtitle_info && $subtitle_info['merge_status'] === 'completed';
+                        ?>
+
                         <video id="mainVideo"
                                controls
                                preload="metadata"
@@ -236,8 +250,7 @@ foreach ($videos as $video) {
                                data-video-id="<?php echo $current_video['id']; ?>"
                                <?php if (isStudent()): ?>onloadedmetadata="initializeVideoPlayer(this)"<?php endif; ?>>
                             <?php
-                            $video_path = $current_video['video_path'];
-                            $extension = strtolower(pathinfo($video_path, PATHINFO_EXTENSION));
+                            $extension = strtolower(pathinfo($video_source, PATHINFO_EXTENSION));
                             $mime_type = 'video/mp4'; // default
 
                             switch($extension) {
@@ -258,10 +271,22 @@ foreach ($videos as $video) {
                                     break;
                             }
                             ?>
-                            <source src="<?php echo htmlspecialchars($current_video['video_path']); ?>" type="<?php echo $mime_type; ?>">
+                            <source src="<?php echo htmlspecialchars($video_source); ?>" type="<?php echo $mime_type; ?>">
+
+                            <?php if ($subtitle_info && $subtitle_info['translated_file_path'] && file_exists($subtitle_info['translated_file_path'])): ?>
+                                <track kind="subtitles" src="<?php echo htmlspecialchars($subtitle_info['translated_file_path']); ?>" srclang="ig" label="Igbo" default>
+                                <track kind="subtitles" src="<?php echo htmlspecialchars($subtitle_info['original_file_path']); ?>" srclang="en" label="English">
+                            <?php endif; ?>
+
                             <p data-translate>Your browser does not support the video tag or this video format.</p>
-                            <p><a href="<?php echo htmlspecialchars($current_video['video_path']); ?>" target="_blank" data-translate>Click here to download and watch the video</a></p>
+                            <p><a href="<?php echo htmlspecialchars($video_source); ?>" target="_blank" data-translate>Click here to download and watch the video</a></p>
                         </video>
+
+                        <?php if ($has_igbo_subtitles): ?>
+                            <div style="background: #d4edda; color: #155724; padding: 0.75rem; border-radius: 5px; margin-top: 0.5rem; font-size: 0.9rem;">
+                                🌍 <strong>Igbo Subtitles Available:</strong> This video includes automatically translated Igbo subtitles for better learning experience.
+                            </div>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="video-info">
@@ -270,7 +295,7 @@ foreach ($videos as $video) {
                             <p><?php echo htmlspecialchars($current_video['description']); ?></p>
                         <?php endif; ?>
                         
-                        <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center;">
+                        <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                             <?php if (isStudent()): ?>
                                 <a href="<?php echo htmlspecialchars($current_video['video_path']); ?>"
                                    download="<?php echo htmlspecialchars($current_video['title']); ?>.mp4"
@@ -280,6 +305,28 @@ foreach ($videos as $video) {
                                 <?php if (isset($video_progress[$current_video['id']]) && $video_progress[$current_video['id']]['completed']): ?>
                                     <span style="color: #28a745; font-weight: bold;">✅ <span data-translate>Completed</span></span>
                                 <?php endif; ?>
+
+                                <?php
+                                // Check for available quiz
+                                $stmt = $conn->prepare("SELECT * FROM quizzes WHERE course_id = ? AND is_active = 1 LIMIT 1");
+                                $stmt->execute([$course_id]);
+                                $course_quiz = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                if ($course_quiz) {
+                                    echo '<a href="quiz.php?id=' . $course_quiz['id'] . '" class="btn-primary" style="background: #6f42c1;">📝 <span data-translate>Take Quiz</span></a>';
+                                }
+
+                                // Check for certificate
+                                $stmt = $conn->prepare("SELECT * FROM certificates WHERE student_id = ? AND course_id = ?");
+                                $stmt->execute([$_SESSION['user_id'], $course_id]);
+                                $course_certificate = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                if ($course_certificate) {
+                                    echo '<a href="certificate.php?id=' . $course_certificate['id'] . '" class="btn-primary" style="background: #fd7e14;">🏆 <span data-translate>View Certificate</span></a>';
+                                }
+                                ?>
+                            <?php elseif (isInstructor()): ?>
+                                <a href="manage-subtitles.php?video_id=<?php echo $current_video['id']; ?>" class="btn-primary" style="background: #6f42c1;">📝 <span data-translate>Manage Subtitles</span></a>
                             <?php endif; ?>
                         </div>
                     </div>

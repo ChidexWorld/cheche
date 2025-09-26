@@ -54,6 +54,29 @@ $selected_course_id = $_GET['course_id'] ?? '';
     </div>
 
     <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label for="subtitle_file" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+            📝 Subtitle File (Optional):
+        </label>
+        <input type="file" name="subtitle_file" id="subtitle_file" accept=".srt,.vtt,.ass,.ssa"
+               style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;">
+        <small style="color: #888; display: block; margin-top: 0.5rem;">
+            ✨ <strong>Auto Igbo Translation:</strong> Upload English subtitles and they will be automatically translated to Igbo<br>
+            Supported formats: SRT, VTT, ASS, SSA<br>
+            Maximum file size: 10MB
+        </small>
+
+        <div id="subtitle-info" style="background: #e8f4fd; border: 1px solid #bee5eb; border-radius: 4px; padding: 1rem; margin-top: 0.5rem; display: none;">
+            <h5 style="margin: 0 0 0.5rem 0; color: #0c5460;">🌍 How Automatic Translation Works:</h5>
+            <ol style="margin: 0; color: #0c5460; font-size: 0.9rem;">
+                <li>Upload your English subtitle file (.srt recommended)</li>
+                <li>System automatically translates text to Igbo language</li>
+                <li>Translated subtitles are merged with your video</li>
+                <li>Students can watch with Igbo subtitles embedded</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 1.5rem;">
         <button type="submit" class="btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;"
                 <?php echo empty($instructor_courses) ? 'disabled' : ''; ?>>
             Upload Video
@@ -71,5 +94,23 @@ $selected_course_id = $_GET['course_id'] ?? '';
         <li>Keep file sizes under 500MB for optimal upload speed</li>
         <li>MP4 format is recommended for best compatibility</li>
         <li>Add detailed descriptions to help students understand the content</li>
+        <li><strong>New:</strong> Upload subtitles for automatic Igbo translation and video merging</li>
     </ul>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const subtitleInput = document.getElementById('subtitle_file');
+    const subtitleInfo = document.getElementById('subtitle-info');
+
+    if (subtitleInput) {
+        subtitleInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                subtitleInfo.style.display = 'block';
+            } else {
+                subtitleInfo.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
