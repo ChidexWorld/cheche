@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/kingsley/scoop/apps/php/current/ext//**)",
-      "Read(//c/Users/kingsley/scoop/apps/php/current/ext/**)"
+      "Read(//c/Users/kingsley/scoop/apps/php/current/ext/**)",
+      "Bash(curl http://localhost:8000/phpinfo.php)"
     ],
     "deny": [],
     "ask": []

@@ -27,6 +27,23 @@ if (!$video) {
     header('Location: student-dashboard.php');
     exit();
 }
+
+// Get subtitle information
+$subtitle = null;
+try {
+    if ($conn === $database) {
+        // File-based database
+        $subtitle = $database->selectOne('subtitles', ['video_id' => $video_id]);
+    } else {
+        // MySQL database
+        $stmt = $conn->prepare("SELECT * FROM subtitles WHERE video_id = ? AND translation_status = 'completed' LIMIT 1");
+        $stmt->execute([$video_id]);
+        $subtitle = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    // Subtitles table might not exist
+    error_log('Subtitle fetch error: ' . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -93,23 +110,86 @@ if (!$video) {
             background: #6c757d;
             color: white;
         }
+        .subtitle-controls {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .subtitle-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-switch.active {
+            background: #28a745;
+        }
+        .toggle-slider {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+        .toggle-switch.active .toggle-slider {
+            left: 28px;
+        }
+        .subtitle-badge {
+            background: #28a745;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
     <div class="video-container">
         <div class="video-wrapper">
-            <video id="videoPlayer" controls controlsList="nodownload">
+            <video id="videoPlayer" controls controlsList="nodownload" crossorigin="anonymous">
                 <source src="../<?php echo htmlspecialchars($video['video_path']); ?>" type="video/mp4">
+                <?php if ($subtitle && !empty($subtitle['translated_file_path'])): ?>
+                    <track id="igboSubtitle" kind="subtitles" src="../<?php echo htmlspecialchars($subtitle['translated_file_path']); ?>" srclang="ig" label="Igbo">
+                <?php endif; ?>
                 Your browser does not support the video tag.
             </video>
         </div>
-        
+
         <div class="video-info">
             <h1><?php echo htmlspecialchars($video['title']); ?></h1>
             <div class="meta-info">
                 <p>Course: <?php echo htmlspecialchars($video['course_title']); ?></p>
                 <p>Instructor: <?php echo htmlspecialchars($video['instructor_name']); ?></p>
             </div>
+
+            <?php if ($subtitle && !empty($subtitle['translated_file_path'])): ?>
+            <div class="subtitle-controls">
+                <div class="subtitle-toggle">
+                    <span>📝 Igbo Subtitles</span>
+                    <div id="subtitleToggle" class="toggle-switch active">
+                        <div class="toggle-slider"></div>
+                    </div>
+                    <span id="subtitleStatus" style="font-size: 0.9rem; color: #28a745;">On</span>
+                </div>
+                <span class="subtitle-badge">Available</span>
+            </div>
+            <?php endif; ?>
             
             <div class="action-buttons">
                 <a href="../api/download-video.php?id=<?php echo $video['id']; ?>" class="btn btn-download">
@@ -137,7 +217,7 @@ if (!$video) {
         // Save video progress
         const video = document.getElementById('videoPlayer');
         const videoId = <?php echo $video_id; ?>;
-        
+
         // Load saved progress
         video.addEventListener('loadedmetadata', function() {
             const savedTime = localStorage.getItem(`video_progress_${videoId}`);
@@ -145,11 +225,56 @@ if (!$video) {
                 video.currentTime = parseFloat(savedTime);
             }
         });
-        
+
         // Save progress periodically
         video.addEventListener('timeupdate', function() {
             localStorage.setItem(`video_progress_${videoId}`, video.currentTime);
         });
+
+        <?php if ($subtitle && !empty($subtitle['translated_file_path'])): ?>
+        // Subtitle toggle functionality
+        const subtitleToggle = document.getElementById('subtitleToggle');
+        const subtitleStatus = document.getElementById('subtitleStatus');
+        const subtitleTrack = document.getElementById('igboSubtitle');
+
+        // Load subtitle preference
+        const subtitlePref = localStorage.getItem(`subtitle_enabled_${videoId}`);
+        let subtitlesEnabled = subtitlePref === null ? true : subtitlePref === 'true';
+
+        // Apply initial state
+        updateSubtitleState(subtitlesEnabled);
+
+        subtitleToggle.addEventListener('click', function() {
+            subtitlesEnabled = !subtitlesEnabled;
+            updateSubtitleState(subtitlesEnabled);
+            localStorage.setItem(`subtitle_enabled_${videoId}`, subtitlesEnabled);
+        });
+
+        function updateSubtitleState(enabled) {
+            if (enabled) {
+                subtitleToggle.classList.add('active');
+                subtitleStatus.textContent = 'On';
+                subtitleStatus.style.color = '#28a745';
+                if (subtitleTrack) {
+                    subtitleTrack.track.mode = 'showing';
+                }
+            } else {
+                subtitleToggle.classList.remove('active');
+                subtitleStatus.textContent = 'Off';
+                subtitleStatus.style.color = '#6c757d';
+                if (subtitleTrack) {
+                    subtitleTrack.track.mode = 'hidden';
+                }
+            }
+        }
+
+        // Ensure subtitle track is available
+        video.addEventListener('loadedmetadata', function() {
+            if (subtitleTrack && subtitleTrack.track) {
+                updateSubtitleState(subtitlesEnabled);
+            }
+        });
+        <?php endif; ?>
     </script>
 </body>
 </html>

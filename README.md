@@ -1,6 +1,15 @@
-# Cheche - E-Learning Platform
+# Cheche - E-Learning Platform with Igbo Language Support
 
-A modern, functional e-learning platform built with PHP, MySQL, HTML, CSS, and JavaScript. Instructors can upload videos, and students can watch or download them.
+A modern, multilingual e-learning platform built with PHP, MySQL, HTML, CSS, and JavaScript. Features automatic English-to-Igbo subtitle translation, interactive quizzes, certificate generation, and comprehensive course management. Designed specifically for the Nigerian educational context with support for indigenous languages.
+
+## 🌟 Unique Features
+- 🌍 **Automatic Subtitle Translation**: Built-in English-to-Igbo dictionary (no API required)
+- 📝 **Interactive Quizzes**: Multiple question types with automatic grading
+- 🏆 **Certificate Generation**: Automatic certificates upon course completion
+- 📹 **Video Upload**: Up to 500MB with real-time progress tracking
+- 🎯 **Multilingual Support**: Toggle between English and Igbo subtitles
+- 💾 **Flexible Storage**: Works with file-based storage or MySQL database
+- 🔒 **Zero External Dependencies**: All translation happens offline locally
 
 ## Features
 
@@ -180,7 +189,8 @@ cheche/
 │   ├── database.php      # Database connection with .env support
 │   ├── database_file.php # File-based database fallback
 │   ├── env.php           # Environment variable loader
-│   └── session.php       # Session management
+│   ├── session.php       # Session management
+│   └── subtitle-processor.php # Subtitle translation and processing engine
 ├── api/
 │   ├── create-course.php # Create new course
 │   ├── upload-video.php  # Upload video files
@@ -201,7 +211,9 @@ cheche/
 │   └── js/
 │       └── main.js       # JavaScript functionality
 ├── uploads/
-│   └── videos/           # Uploaded video files
+│   ├── videos/           # Uploaded video files
+│   ├── subtitles/        # Original and translated subtitle files
+│   └── merged_videos/    # Videos with embedded subtitles (if using FFmpeg)
 ├── data/                 # JSON data files (file storage mode)
 ├── .env                  # Environment configuration (not tracked)
 └── .env.example          # Environment configuration template
@@ -257,16 +269,20 @@ cheche/
 - **Instructor Analytics**: Track student performance and certificate issuance
 
 ### 🌍 Subtitle & Translation Features
-- **Multi-format Support**: Upload SRT, VTT, ASS, SSA subtitle files
-- **Automatic Translation**: English to Igbo language translation engine
-- **Smart Processing**: Parse, translate, and merge subtitles automatically
-- **Video Integration**: Embed translated subtitles directly into video files
-- **Dual Language Support**: Toggle between English and Igbo subtitles
-- **Progress Monitoring**: Real-time status tracking for translation and merging
-- **Instructor Management**: Comprehensive subtitle management interface
-- **Student Experience**: Seamless multilingual video playback
-- **Error Recovery**: Automatic retry mechanisms for failed processes
-- **File Organization**: Structured storage for original, translated, and merged content
+- **Multi-format Support**: Upload SRT, VTT, ASS, SSA subtitle files (10MB max)
+- **Built-in Translation Engine**: Dictionary-based English-to-Igbo translation (no external API)
+- **100+ Word Dictionary**: Comprehensive coverage of education and technical terms
+- **Smart Processing**: Automatic SRT to VTT conversion for HTML5 compatibility
+- **Video Integration**: Optional subtitle toggle for students and instructors
+- **Dual Language Support**: Toggle Igbo subtitles on/off during video playback
+- **Word-by-Word Translation**: Preserves punctuation and formatting
+- **User Preference Memory**: Remembers subtitle preference per video
+- **HTML5 Compatible**: Uses WebVTT format for universal browser support
+- **Inline Subtitle Display**: Subtitles overlay directly on video player
+- **Automatic Processing**: Translation and conversion happen during upload
+- **File Organization**: Structured storage for original (SRT) and translated (VTT) files
+- **Zero Cost Translation**: No API fees or subscriptions required
+- **Offline Capability**: Works completely without internet for translation
 
 ## Technical Details
 
@@ -276,10 +292,13 @@ cheche/
 - Role-based access control (Student/Instructor)
 
 ### Video Upload
-- Supports MP4, AVI, MOV, WMV, MKV formats
-- File size limit: 100MB
+- Supports MP4, AVI, MOV, WMV, MKV, WebM, FLV formats
+- File size limit: 500MB (configurable)
+- **Real-time upload progress bar** with percentage and size display
+- **Client-side validation** before upload starts
 - Automatic file validation and security checks
 - Unique filename generation to prevent conflicts
+- **Error handling** with user-friendly messages
 
 ### Progress Tracking
 - Real-time progress updates every 10 seconds
@@ -321,5 +340,111 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ```
 
+## Subtitle Translation System
+
+### Translation Method: Dictionary-Based (No External API Required)
+
+The platform uses a **built-in dictionary-based translation system** that operates completely offline without requiring any external API calls or internet connectivity for translation. This ensures:
+- ✅ **Zero API costs** - No subscription fees or usage limits
+- ✅ **Fast processing** - Instant translation without network latency
+- ✅ **Privacy** - No data sent to external services
+- ✅ **Reliability** - No dependency on third-party service availability
+- ✅ **Offline capability** - Works without internet connection
+
+### How It Works
+The platform includes an automatic English-to-Igbo subtitle translation system:
+
+1. **Upload**: Instructor uploads a video with an English subtitle file (.srt, .vtt, .ass, .ssa)
+2. **Parse**: System parses the subtitle file and extracts text segments
+3. **Translate**: Each text segment is translated using a comprehensive **built-in English-Igbo dictionary** (100+ words)
+4. **Convert**: Translated subtitles are saved as both SRT and VTT formats
+5. **Display**: Students can toggle Igbo subtitles on/off while watching videos
+
+### Built-In Translation Dictionary
+The system includes a **native PHP-based dictionary** with translations for:
+- **Common words**: the, a, an, and, or, but, in, on, at, to, for, of, with, by, from
+- **Education terms**: learning, course, student, instructor, teacher, lesson, study, knowledge, skill
+- **Technical terms**: platform, system, design, develop, create, build, modern, scalable, tools
+- **Action words**: click, select, save, delete, edit, update, submit, search, view, watch
+- **Nigerian context**: Nigeria, Igbo-specific terms, cultural context
+- **Verbs & pronouns**: is, was, are, were, be, have, do, will, can, should, I, you, he, she, it
+
+**Total: 100+ word mappings with punctuation preservation**
+
+### Translation Engine
+- **Type**: Dictionary-based lookup system
+- **Implementation**: Native PHP (no external libraries)
+- **Algorithm**: Word-by-word translation with context preservation
+- **Format preservation**: Maintains original punctuation and line breaks
+- **Case handling**: Preserves original word casing patterns
+- **API Required**: None - completely self-contained
+
+### Extending the Dictionary
+To add more translations, edit `config/subtitle-processor.php` and add entries to the `$dictionary` array:
+
+```php
+'english_word' => 'igbo_translation',
+```
+
+Example:
+```php
+$dictionary = [
+    'welcome' => 'nnọọ',
+    'goodbye' => 'ka ọ dị',
+    'water' => 'mmiri',
+    // Add your custom translations here
+];
+```
+
+### Optional: Upgrading to Google Translate API
+While the platform works perfectly with the built-in dictionary, you can optionally integrate **Google Cloud Translation API** for comprehensive translation:
+
+**Setup Steps:**
+1. Get API key from [Google Cloud Console](https://console.cloud.google.com)
+2. Install Google Translate PHP client: `composer require google/cloud-translate`
+3. Modify the `translateText()` method in `config/subtitle-processor.php`:
+
+```php
+use Google\Cloud\Translate\V2\TranslateClient;
+
+public function translateText($text, $from_lang = 'en', $to_lang = 'ig') {
+    $translate = new TranslateClient([
+        'key' => 'YOUR_API_KEY'
+    ]);
+
+    $result = $translate->translate($text, [
+        'target' => $to_lang,
+        'source' => $from_lang
+    ]);
+
+    return $result['text'];
+}
+```
+
+**Note**: Google Translate API costs approximately $20 per million characters translated.
+
+## Video Upload Progress Bar
+
+The platform features a modern upload interface with:
+- **Real-time progress tracking**: Shows upload percentage and transferred data
+- **Client-side validation**: Checks file size and type before upload
+- **Visual feedback**: Progress bar with color indicators
+- **Error handling**: Clear error messages for upload failures
+- **Large file support**: Handles videos up to 500MB
+
 ## Support
 This is a functional e-learning platform ready for immediate use. The code is well-structured and documented for easy maintenance and extension.
+
+### Key Features Summary
+✅ User authentication and role management
+✅ Course creation and management
+✅ Video upload with progress tracking (up to 500MB)
+✅ **Built-in subtitle translation** (English → Igbo, no API required)
+✅ Dictionary-based translation engine (100+ words)
+✅ Interactive quizzes with multiple question types
+✅ Certificate generation and verification
+✅ Student progress tracking
+✅ Responsive design for all devices
+✅ File-based or MySQL database support
+✅ Zero external API dependencies for core features
+✅ Completely offline-capable translation system
