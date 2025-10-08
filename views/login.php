@@ -12,6 +12,7 @@ if (isLoggedIn()) {
 }
 
 $error = '';
+$error_safe_html = false; // Flag to indicate if error contains safe HTML
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -36,7 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$user) {
-                $error = '❌ No account found with this email address. <a href="register.php">Sign up here</a>';
+                $error = '❌ No account found with this email address. <a href="register.php" style="color: #4a90e2; text-decoration: underline;">Sign up here</a>';
+                $error_safe_html = true; // This error contains safe HTML
             } elseif (!password_verify($password, $user['password'])) {
                 $error = '❌ Incorrect password. Please check your password and try again';
             } else {
@@ -98,7 +100,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h2 data-translate>Welcome Back</h2>
         
         <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="alert alert-error">
+                <?php 
+                if ($error_safe_html) {
+                    echo $error; // Output HTML directly for safe, controlled HTML
+                } else {
+                    echo htmlspecialchars($error); // Escape for security
+                }
+                ?>
+            </div>
         <?php endif; ?>
         
         <?php if ($success): ?>
