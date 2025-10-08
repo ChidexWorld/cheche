@@ -10,39 +10,39 @@ class Env {
 
         $envFile = $file ?: __DIR__ . '/../.env';
 
-        if (!file_exists($envFile)) {
-            throw new Exception("Environment file not found: $envFile");
-        }
+        // Only load .env file if it exists (for local development)
+        // On Render, environment variables are set at the system level
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                $line = trim($line);
 
-        foreach ($lines as $line) {
-            $line = trim($line);
+                // Skip comments
+                if (strpos($line, '#') === 0) {
+                    continue;
+                }
 
-            // Skip comments
-            if (strpos($line, '#') === 0) {
-                continue;
-            }
+                // Parse key=value pairs
+                $parts = explode('=', $line, 2);
+                if (count($parts) !== 2) {
+                    continue;
+                }
 
-            // Parse key=value pairs
-            $parts = explode('=', $line, 2);
-            if (count($parts) !== 2) {
-                continue;
-            }
+                $key = trim($parts[0]);
+                $value = trim($parts[1]);
 
-            $key = trim($parts[0]);
-            $value = trim($parts[1]);
+                // Remove quotes if present
+                if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+                    (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
+                    $value = substr($value, 1, -1);
+                }
 
-            // Remove quotes if present
-            if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
-                (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
-                $value = substr($value, 1, -1);
-            }
-
-            // Set environment variable if not already set
-            if (!isset($_ENV[$key]) && !getenv($key)) {
-                $_ENV[$key] = $value;
-                putenv("$key=$value");
+                // Set environment variable if not already set
+                if (!isset($_ENV[$key]) && !getenv($key)) {
+                    $_ENV[$key] = $value;
+                    putenv("$key=$value");
+                }
             }
         }
 
@@ -78,9 +78,5 @@ class Env {
 }
 
 // Auto-load environment on include
-try {
-    Env::load();
-} catch (Exception $e) {
-    error_log("Failed to load environment: " . $e->getMessage());
-}
+Env::load();
 ?>
