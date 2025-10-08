@@ -7,29 +7,40 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get course details
-$course = $conn->selectOne('courses', ['id' => $course_id]);
+$stmt = $conn->prepare("SELECT * FROM courses WHERE id = ?");
+$stmt->execute([$course_id]);
+$course = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$course) {
     header('Location: courses.php');
     exit();
 }
 
 // Get instructor details
-$instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->execute([$course['instructor_id']]);
+$instructor = $stmt->fetch(PDO::FETCH_ASSOC);
 $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
 // Get course videos (just basic info for preview)
-$videos = $conn->select('videos', ['course_id' => $course_id], 'order_number ASC');
+$stmt = $conn->prepare("SELECT * FROM videos WHERE course_id = ? ORDER BY order_number ASC");
+$stmt->execute([$course_id]);
+$videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Check if user is logged in and enrolled
 $is_enrolled = false;
 $can_enroll = true;
 if (isset($_SESSION['user_id']) && isStudent()) {
-    $enrollment = $conn->selectOne('enrollments', ['student_id' => $_SESSION['user_id'], 'course_id' => $course_id]);
+    $stmt = $conn->prepare("SELECT * FROM enrollments WHERE student_id = ? AND course_id = ?");
+    $stmt->execute([$_SESSION['user_id'], $course_id]);
+    $enrollment = $stmt->fetch(PDO::FETCH_ASSOC);
     $is_enrolled = $enrollment !== null;
 }
 
 // Get enrollment count
-$enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
+$stmt = $conn->prepare("SELECT COUNT(*) as count FROM enrollments WHERE course_id = ?");
+$stmt->execute([$course_id]);
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+$enrollment_count = (int)$result['count'];
 ?>
 
 <!DOCTYPE html>
@@ -133,7 +144,7 @@ $enrollment_count = $conn->count('enrollments', ['course_id' => $course_id]);
                 <a href="courses.php">All Courses</a>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <a href="<?php echo isInstructor() ? 'instructor-dashboard.php' : 'student-dashboard.php'; ?>">Dashboard</a>
-                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
+                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></span>
                     <a href="logout.php" class="btn-secondary">Logout</a>
                 <?php else: ?>
                     <a href="login.php" class="btn-secondary">Login</a>

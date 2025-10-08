@@ -34,33 +34,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db = $database->getConnection();
             
             // Check if username or email already exists
-            $existing = $db->select('users', ['username' => $username]);
-            if (!empty($existing)) {
-                $error = 'Username already exists';
-            } else {
-                $existing = $db->select('users', ['email' => $email]);
-                if (!empty($existing)) {
-                    $error = 'Email already exists';
+            $stmt = $db->prepare("SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1");
+            $stmt->execute([$username, $email]);
+            $existing = $stmt->fetch();
+            
+            if ($existing) {
+                if ($existing['username'] === $username) {
+                    $error = 'Username already exists';
                 } else {
-                    // Create new user
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $userData = [
-                        'full_name' => $full_name,
-                        'username' => $username,
-                        'email' => $email,
-                        'password' => $hashed_password,
-                        'role' => $role
-                    ];
+                    $error = 'Email already exists';
+                }
+            } else {
+                // Create new user
+                $stmt = $db->prepare("INSERT INTO users (full_name, username, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+                
+                if ($stmt->execute([
+                    $full_name,
+                    $username,
+                    $email,
+                    password_hash($password, PASSWORD_DEFAULT),
+                    $role
+                ])) {
+                    $_SESSION['user_id'] = $db->lastInsertId();
+                    $_SESSION['username'] = $username;
+                    $_SESSION['role'] = $role;
                     
-                    if ($db->insert('users', $userData)) {
-                        $success = 'Account created successfully! You can now login.';
-                    } else {
-                        $error = 'Registration failed. Please try again.';
-                    }
+                    // Redirect based on role
+                    header('Location: ' . ($role === 'instructor' ? 'instructor-dashboard.php' : 'student-dashboard.php'));
+                    exit();
+                } else {
+                    $error = 'Registration failed. Please try again.';
                 }
             }
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             $error = 'Registration failed. Please try again.';
+            error_log($e->getMessage());
         }
     }
 }
@@ -73,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
 </head>
 <body>
     <nav class="navbar">
@@ -83,14 +92,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </a>
             </div>
             <div class="nav-links">
-                <a href="index.php">Home</a>
-                <a href="login.php" class="btn-secondary">Login</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <a href="index.php" data-translate>Home</a>
+                <a href="login.php" class="btn-secondary" data-translate>Login</a>
             </div>
         </div>
     </nav>
 
     <div class="form-container">
-        <h2>Join Cheche</h2>
+        <h2 data-translate>Join Cheche</h2>
         
         <?php if ($error): ?>
             <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
@@ -102,54 +120,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <form method="POST" action="">
             <div class="form-group">
-                <label for="full_name">Full Name</label>
+                <label for="full_name" data-translate>Full Name</label>
                 <input type="text" id="full_name" name="full_name" required 
                        value="<?php echo htmlspecialchars($full_name ?? ''); ?>">
             </div>
             
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username" data-translate>Username</label>
                 <input type="text" id="username" name="username" required 
                        value="<?php echo htmlspecialchars($username ?? ''); ?>">
             </div>
             
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="email" data-translate>Email Address</label>
                 <input type="email" id="email" name="email" required 
                        value="<?php echo htmlspecialchars($email ?? ''); ?>">
             </div>
             
             <div class="form-group">
-                <label for="role">I want to</label>
+                <label for="role" data-translate>I want to</label>
                 <select id="role" name="role" required>
                     <option value="student" <?php echo ($role ?? 'student') === 'student' ? 'selected' : ''; ?>>
-                        Learn (Student)
+                        <span data-translate>Learn (Student)</span>
                     </option>
                     <option value="instructor" <?php echo ($role ?? '') === 'instructor' ? 'selected' : ''; ?>>
-                        Teach (Instructor)
+                        <span data-translate>Teach (Instructor)</span>
                     </option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password" data-translate>Password</label>
                 <input type="password" id="password" name="password" required 
-                       minlength="6" placeholder="At least 6 characters">
+                       minlength="6" data-translate placeholder="At least 6 characters">
             </div>
             
             <div class="form-group">
-                <label for="confirm_password">Confirm Password</label>
+                <label for="confirm_password" data-translate>Confirm Password</label>
                 <input type="password" id="confirm_password" name="confirm_password" required>
             </div>
             
-            <button type="submit" class="btn-primary" style="width: 100%;">Create Account</button>
+            <button type="submit" class="btn-primary" style="width: 100%;" data-translate>Create Account</button>
         </form>
         
         <p style="text-align: center; margin-top: 2rem;">
-            Already have an account? <a href="login.php" style="color: #4a90e2;">Login here</a>
+            <span data-translate>Already have an account?</span> <a href="login.php" style="color: #4a90e2;" data-translate>Login here</a>
         </p>
     </div>
 
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/language.js"></script>
 </body>
 </html>

@@ -31,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $database = new Database();
             $db = $database->getConnection();
             
-            $user = $db->selectOne('users', ['email' => $email]);
+            $stmt = $db->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$user) {
                 $error = '❌ No account found with this email address. <a href="register.php">Sign up here</a>';
@@ -66,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
 </head>
 <body>
     <nav class="navbar">
@@ -76,14 +79,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </a>
             </div>
             <div class="nav-links">
-                <a href="index.php">Home</a>
-                <a href="register.php" class="btn-primary">Sign Up</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <a href="index.php" data-translate>Home</a>
+                <a href="register.php" class="btn-primary" data-translate>Sign Up</a>
             </div>
         </div>
     </nav>
 
     <div class="form-container">
-        <h2>Welcome Back</h2>
+        <h2 data-translate>Welcome Back</h2>
         
         <?php if ($error): ?>
             <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
@@ -95,28 +107,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <form method="POST" action="">
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="email" data-translate>Email Address</label>
                 <input type="email" id="email" name="email" required 
                        value="<?php echo htmlspecialchars($email ?? ''); ?>">
             </div>
             
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password" data-translate>Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
 
             <div style="text-align: right; margin-bottom: 1rem;">
-                <a href="forgot-password.php" style="color: #4a90e2; font-size: 0.9rem;">Forgot your password?</a>
+                <a href="forgot-password.php" style="color: #4a90e2; font-size: 0.9rem;" data-translate>Forgot your password?</a>
             </div>
 
-            <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
+            <button type="submit" class="btn-primary" style="width: 100%;" data-translate>Login</button>
         </form>
 
         <p style="text-align: center; margin-top: 2rem;">
-            Don't have an account? <a href="register.php" style="color: #4a90e2;">Sign up here</a>
+            <span data-translate>Don't have an account?</span> <a href="register.php" style="color: #4a90e2;" data-translate>Sign up here</a>
         </p>
     </div>
 
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/language.js"></script>
 </body>
 </html>

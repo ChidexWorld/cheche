@@ -53,7 +53,7 @@ $students = $stmt->fetchAll();
             </div>
             <div class="nav-links">
                 <a href="instructor-dashboard.php">Dashboard</a>
-                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
+                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Instructor'); ?></span>
                 <a href="logout.php" class="btn-secondary">Logout</a>
             </div>
         </div>

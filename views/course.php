@@ -9,14 +9,18 @@ $database = new Database();
 $conn = $database->getConnection();
 
 // Get course details
-$course = $conn->selectOne('courses', ['id' => $course_id]);
+$stmt = $conn->prepare("SELECT * FROM courses WHERE id = ?");
+$stmt->execute([$course_id]);
+$course = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$course) {
     header('Location: student-dashboard.php');
     exit();
 }
 
 // Get instructor details
-$instructor = $conn->selectOne('users', ['id' => $course['instructor_id']]);
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->execute([$course['instructor_id']]);
+$instructor = $stmt->fetch(PDO::FETCH_ASSOC);
 $course['instructor_name'] = $instructor ? $instructor['full_name'] : 'Unknown Instructor';
 
 // Check if user is enrolled (for students) or owns the course (for instructors)
@@ -24,7 +28,9 @@ $can_access = false;
 if (isInstructor() && $course['instructor_id'] == $_SESSION['user_id']) {
     $can_access = true;
 } elseif (isStudent()) {
-    $enrollment = $conn->selectOne('enrollments', ['student_id' => $_SESSION['user_id'], 'course_id' => $course_id]);
+    $stmt = $conn->prepare("SELECT * FROM enrollments WHERE student_id = ? AND course_id = ?");
+    $stmt->execute([$_SESSION['user_id'], $course_id]);
+    $enrollment = $stmt->fetch(PDO::FETCH_ASSOC);
     $can_access = $enrollment !== null;
 }
 
@@ -34,18 +40,24 @@ if (!$can_access) {
 }
 
 // Get course videos
-$videos = $conn->select('videos', ['course_id' => $course_id], 'order_number ASC');
+$stmt = $conn->prepare("SELECT * FROM videos WHERE course_id = ? ORDER BY order_number ASC");
+$stmt->execute([$course_id]);
+$videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get video progress (for students)
 $video_progress = [];
 if (isStudent()) {
-    $all_progress = $conn->select('video_progress', ['student_id' => $_SESSION['user_id']]);
+    // Get video progress for all videos in this course
+    $stmt = $conn->prepare("
+        SELECT vp.* 
+        FROM video_progress vp
+        JOIN videos v ON vp.video_id = v.id
+        WHERE vp.student_id = ? AND v.course_id = ?
+    ");
+    $stmt->execute([$_SESSION['user_id'], $course_id]);
+    $all_progress = $stmt->fetchAll(PDO::FETCH_ASSOC);
     foreach ($all_progress as $progress) {
-        // Check if this progress is for a video in this course
-        $video_check = $conn->selectOne('videos', ['id' => $progress['video_id'], 'course_id' => $course_id]);
-        if ($video_check) {
-            $video_progress[$progress['video_id']] = $progress;
-        }
+        $video_progress[$progress['video_id']] = $progress;
     }
 }
 
@@ -66,6 +78,7 @@ foreach ($videos as $video) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($course['title']); ?> - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
     <style>
         .course-layout {
             display: grid;
@@ -115,6 +128,74 @@ foreach ($videos as $video) {
                 margin-top: 80px;
             }
         }
+
+        /* Language Dropdown Styles */
+        .language-dropdown {
+            position: relative;
+            display: inline-block;
+            margin-right: 1rem;
+        }
+
+        .language-toggle {
+            background: #4a90e2 !important;
+            color: white !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 20px !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            transition: all 0.3s ease !important;
+            outline: none !important;
+        }
+
+        .language-toggle:hover {
+            background: #357abd !important;
+            transform: translateY(-2px);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: white !important;
+            min-width: 120px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2) !important;
+            border-radius: 8px !important;
+            z-index: 9999 !important;
+            overflow: hidden;
+            border: 1px solid #ddd !important;
+            margin-top: 5px;
+        }
+
+        .dropdown-content a {
+            color: #333 !important;
+            padding: 12px 16px !important;
+            text-decoration: none !important;
+            display: block !important;
+            transition: background-color 0.3s ease !important;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1 !important;
+        }
+
+        .dropdown-content.show {
+            display: block !important;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Ensure nav-links has proper flex display */
+        .nav-links {
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+        }
     </style>
 </head>
 <body>
@@ -126,9 +207,18 @@ foreach ($videos as $video) {
                 </a>
             </div>
             <div class="nav-links">
-                <a href="<?php echo isInstructor() ? 'instructor-dashboard.php' : 'student-dashboard.php'; ?>">Dashboard</a>
-                <span>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
-                <a href="logout.php" class="btn-secondary">Logout</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <a href="<?php echo isInstructor() ? 'instructor-dashboard.php' : 'student-dashboard.php'; ?>" data-translate>Dashboard</a>
+                <span><span data-translate>Welcome</span>, <?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></span>
+                <a href="logout.php" class="btn-secondary" data-translate>Logout</a>
             </div>
         </div>
     </nav>
@@ -138,6 +228,20 @@ foreach ($videos as $video) {
             <div class="video-section">
                 <?php if ($current_video): ?>
                     <div class="video-player">
+                        <?php
+                        // Check for merged video with subtitles
+                        $stmt = $conn->prepare("SELECT * FROM subtitles WHERE video_id = ? AND merge_status = 'completed'");
+                        $stmt->execute([$current_video['id']]);
+                        $subtitle_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        // Use merged video if available, otherwise use original
+                        $video_source = $subtitle_info && $subtitle_info['merged_video_path'] && file_exists($subtitle_info['merged_video_path'])
+                            ? $subtitle_info['merged_video_path']
+                            : $current_video['video_path'];
+
+                        $has_igbo_subtitles = $subtitle_info && $subtitle_info['merge_status'] === 'completed';
+                        ?>
+
                         <video id="mainVideo"
                                controls
                                preload="metadata"
@@ -146,8 +250,7 @@ foreach ($videos as $video) {
                                data-video-id="<?php echo $current_video['id']; ?>"
                                <?php if (isStudent()): ?>onloadedmetadata="initializeVideoPlayer(this)"<?php endif; ?>>
                             <?php
-                            $video_path = $current_video['video_path'];
-                            $extension = strtolower(pathinfo($video_path, PATHINFO_EXTENSION));
+                            $extension = strtolower(pathinfo($video_source, PATHINFO_EXTENSION));
                             $mime_type = 'video/mp4'; // default
 
                             switch($extension) {
@@ -168,10 +271,22 @@ foreach ($videos as $video) {
                                     break;
                             }
                             ?>
-                            <source src="<?php echo htmlspecialchars($current_video['video_path']); ?>" type="<?php echo $mime_type; ?>">
-                            <p>Your browser does not support the video tag or this video format.</p>
-                            <p><a href="<?php echo htmlspecialchars($current_video['video_path']); ?>" target="_blank">Click here to download and watch the video</a></p>
+                            <source src="<?php echo htmlspecialchars($video_source); ?>" type="<?php echo $mime_type; ?>">
+
+                            <?php if ($subtitle_info && $subtitle_info['translated_file_path'] && file_exists($subtitle_info['translated_file_path'])): ?>
+                                <track kind="subtitles" src="<?php echo htmlspecialchars($subtitle_info['translated_file_path']); ?>" srclang="ig" label="Igbo" default>
+                                <track kind="subtitles" src="<?php echo htmlspecialchars($subtitle_info['original_file_path']); ?>" srclang="en" label="English">
+                            <?php endif; ?>
+
+                            <p data-translate>Your browser does not support the video tag or this video format.</p>
+                            <p><a href="<?php echo htmlspecialchars($video_source); ?>" target="_blank" data-translate>Click here to download and watch the video</a></p>
                         </video>
+
+                        <?php if ($has_igbo_subtitles): ?>
+                            <div style="background: #d4edda; color: #155724; padding: 0.75rem; border-radius: 5px; margin-top: 0.5rem; font-size: 0.9rem;">
+                                🌍 <strong>Igbo Subtitles Available:</strong> This video includes automatically translated Igbo subtitles for better learning experience.
+                            </div>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="video-info">
@@ -180,25 +295,47 @@ foreach ($videos as $video) {
                             <p><?php echo htmlspecialchars($current_video['description']); ?></p>
                         <?php endif; ?>
                         
-                        <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center;">
+                        <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                             <?php if (isStudent()): ?>
-                                <a href="<?php echo htmlspecialchars($current_video['video_path']); ?>" 
-                                   download="<?php echo htmlspecialchars($current_video['title']); ?>.mp4" 
+                                <a href="<?php echo htmlspecialchars($current_video['video_path']); ?>"
+                                   download="<?php echo htmlspecialchars($current_video['title']); ?>.mp4"
                                    class="btn-primary">
-                                    ⬇️ Download Video
+                                    ⬇️ <span data-translate>Download Video</span>
                                 </a>
                                 <?php if (isset($video_progress[$current_video['id']]) && $video_progress[$current_video['id']]['completed']): ?>
-                                    <span style="color: #28a745; font-weight: bold;">✅ Completed</span>
+                                    <span style="color: #28a745; font-weight: bold;">✅ <span data-translate>Completed</span></span>
                                 <?php endif; ?>
+
+                                <?php
+                                // Check for available quiz
+                                $stmt = $conn->prepare("SELECT * FROM quizzes WHERE course_id = ? AND is_active = 1 LIMIT 1");
+                                $stmt->execute([$course_id]);
+                                $course_quiz = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                if ($course_quiz) {
+                                    echo '<a href="quiz.php?id=' . $course_quiz['id'] . '" class="btn-primary" style="background: #6f42c1;">📝 <span data-translate>Take Quiz</span></a>';
+                                }
+
+                                // Check for certificate
+                                $stmt = $conn->prepare("SELECT * FROM certificates WHERE student_id = ? AND course_id = ?");
+                                $stmt->execute([$_SESSION['user_id'], $course_id]);
+                                $course_certificate = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                if ($course_certificate) {
+                                    echo '<a href="certificate.php?id=' . $course_certificate['id'] . '" class="btn-primary" style="background: #fd7e14;">🏆 <span data-translate>View Certificate</span></a>';
+                                }
+                                ?>
+                            <?php elseif (isInstructor()): ?>
+                                <a href="manage-subtitles.php?video_id=<?php echo $current_video['id']; ?>" class="btn-primary" style="background: #6f42c1;">📝 <span data-translate>Manage Subtitles</span></a>
                             <?php endif; ?>
                         </div>
                     </div>
                 <?php else: ?>
                     <div class="video-info">
-                        <h2>No videos available</h2>
-                        <p>This course doesn't have any videos yet.</p>
+                        <h2 data-translate>No videos available</h2>
+                        <p data-translate>This course doesn't have any videos yet.</p>
                         <?php if (isInstructor()): ?>
-                            <a href="instructor-dashboard.php?tab=upload&course_id=<?php echo $course['id']; ?>" class="btn-primary">
+                            <a href="instructor-dashboard.php?tab=upload&course_id=<?php echo $course['id']; ?>" class="btn-primary" data-translate>
                                 Add Videos
                             </a>
                         <?php endif; ?>
@@ -211,11 +348,11 @@ foreach ($videos as $video) {
                     <h3><?php echo htmlspecialchars($course['title']); ?></h3>
                     <?php if (isInstructor()): ?>
                         <a href="instructor-dashboard.php?tab=upload&course_id=<?php echo $course['id']; ?>" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">
-                            + Add Video
+                            + <span data-translate>Add Video</span>
                         </a>
                     <?php endif; ?>
                 </div>
-                <p style="color: #666; margin-bottom: 1rem;">By <?php echo htmlspecialchars($course['instructor_name']); ?></p>
+                <p style="color: #666; margin-bottom: 1rem;"><span data-translate>By</span> <?php echo htmlspecialchars($course['instructor_name']); ?></p>
                 
                 <?php if ($videos): ?>
                     <div class="video-list">
@@ -229,7 +366,7 @@ foreach ($videos as $video) {
                                         <h4 style="margin: 0; font-size: 0.9rem;"><?php echo htmlspecialchars($video['title']); ?></h4>
                                         <?php if (isset($video_progress[$video['id']]) && $video_progress[$video['id']]['watched_duration'] > 0): ?>
                                             <small style="color: #888;">
-                                                Watched: <?php echo gmdate("i:s", $video_progress[$video['id']]['watched_duration']); ?>
+                                                <span data-translate>Watched</span>: <?php echo gmdate("i:s", $video_progress[$video['id']]['watched_duration']); ?>
                                             </small>
                                         <?php endif; ?>
                                     </div>
@@ -241,13 +378,14 @@ foreach ($videos as $video) {
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <p>No videos in this course yet.</p>
+                    <p data-translate>No videos in this course yet.</p>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/language.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const video = document.getElementById('mainVideo');
@@ -258,9 +396,9 @@ foreach ($videos as $video) {
                     const errorDiv = document.createElement('div');
                     errorDiv.style.cssText = 'background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; margin: 1rem 0;';
                     errorDiv.innerHTML = `
-                        <strong>Video playback error:</strong><br>
-                        This video format may not be supported by your browser.<br>
-                        <a href="${video.querySelector('source').src}" target="_blank" style="color: #1976d2;">Click here to download the video</a>
+                        <strong data-translate>Video playback error:</strong><br>
+                        <span data-translate>This video format may not be supported by your browser.</span><br>
+                        <a href="${video.querySelector('source').src}" target="_blank" style="color: #1976d2;" data-translate>Click here to download the video</a>
                     `;
                     video.parentNode.insertBefore(errorDiv, video.nextSibling);
                 });

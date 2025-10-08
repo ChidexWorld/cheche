@@ -38,6 +38,10 @@ class Database {
                     );
                     $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                     $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+
+                    // Initialize tables if they don't exist
+                    $this->initializeTables();
+
                 } elseif (class_exists('mysqli')) {
                     // Fallback to mysqli
                     $this->conn = new MySQLiPDOWrapper(
@@ -47,18 +51,160 @@ class Database {
                         $this->db_name,
                         $this->port
                     );
+
+                    // Initialize tables if they don't exist
+                    $this->initializeTables();
+
                 } else {
                     // Fallback to file storage for development
                     error_log("MySQL not available, falling back to file storage");
+                    $this->initializeFileStorage();
                     return $this; // Use existing file-based methods
                 }
             } catch(Exception $exception) {
                 // If MySQL connection fails, fallback to file storage
                 error_log("MySQL connection failed: " . $exception->getMessage() . ", falling back to file storage");
+                $this->initializeFileStorage();
                 return $this; // Use existing file-based methods
             }
         }
         return $this->conn;
+    }
+
+    private function initializeTables() {
+        try {
+            // Check if quiz tables exist, if not create them
+            $tables_to_check = [
+                'quizzes' => "CREATE TABLE IF NOT EXISTS quizzes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    course_id INT NOT NULL,
+                    title VARCHAR(200) NOT NULL,
+                    description TEXT,
+                    passing_score DECIMAL(5,2) DEFAULT 70.00,
+                    max_attempts INT DEFAULT 3,
+                    time_limit INT DEFAULT 30,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )",
+                'quiz_questions' => "CREATE TABLE IF NOT EXISTS quiz_questions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    quiz_id INT NOT NULL,
+                    question_text TEXT NOT NULL,
+                    question_type ENUM('multiple_choice', 'true_false', 'short_answer') DEFAULT 'multiple_choice',
+                    points DECIMAL(5,2) DEFAULT 1.00,
+                    order_number INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )",
+                'quiz_options' => "CREATE TABLE IF NOT EXISTS quiz_options (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    question_id INT NOT NULL,
+                    option_text TEXT NOT NULL,
+                    is_correct BOOLEAN DEFAULT FALSE,
+                    order_number INT DEFAULT 0
+                )",
+                'quiz_attempts' => "CREATE TABLE IF NOT EXISTS quiz_attempts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    student_id INT NOT NULL,
+                    quiz_id INT NOT NULL,
+                    attempt_number INT DEFAULT 1,
+                    score DECIMAL(5,2) DEFAULT 0.00,
+                    max_score DECIMAL(5,2) DEFAULT 0.00,
+                    passed BOOLEAN DEFAULT FALSE,
+                    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TIMESTAMP NULL,
+                    time_taken INT DEFAULT 0,
+                    INDEX idx_student_quiz (student_id, quiz_id)
+                )",
+                'quiz_responses' => "CREATE TABLE IF NOT EXISTS quiz_responses (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    attempt_id INT NOT NULL,
+                    question_id INT NOT NULL,
+                    option_id INT NULL,
+                    answer_text TEXT NULL,
+                    is_correct BOOLEAN DEFAULT FALSE,
+                    points_earned DECIMAL(5,2) DEFAULT 0.00
+                )",
+                'certificates' => "CREATE TABLE IF NOT EXISTS certificates (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    student_id INT NOT NULL,
+                    course_id INT NOT NULL,
+                    certificate_number VARCHAR(100) UNIQUE NOT NULL,
+                    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completion_percentage DECIMAL(5,2) DEFAULT 100.00,
+                    quiz_score DECIMAL(5,2) NULL,
+                    certificate_data JSON NULL,
+                    UNIQUE KEY unique_certificate (student_id, course_id)
+                )",
+                'subtitles' => "CREATE TABLE IF NOT EXISTS subtitles (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    video_id INT NOT NULL,
+                    original_file_path VARCHAR(500) NULL,
+                    translated_file_path VARCHAR(500) NULL,
+                    merged_video_path VARCHAR(500) NULL,
+                    language_from VARCHAR(10) DEFAULT 'en',
+                    language_to VARCHAR(10) DEFAULT 'ig',
+                    translation_status ENUM('pending', 'translating', 'completed', 'failed') DEFAULT 'pending',
+                    merge_status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )",
+                'translation_jobs' => "CREATE TABLE IF NOT EXISTS translation_jobs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    subtitle_id INT NOT NULL,
+                    job_type ENUM('translate', 'merge') NOT NULL,
+                    status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+                    error_message TEXT NULL,
+                    started_at TIMESTAMP NULL,
+                    completed_at TIMESTAMP NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )"
+            ];
+
+            foreach ($tables_to_check as $table => $sql) {
+                try {
+                    $this->conn->exec($sql);
+                } catch (Exception $e) {
+                    // Log the error but continue - table might already exist
+                    error_log("Table creation warning for $table: " . $e->getMessage());
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error initializing tables: " . $e->getMessage());
+        }
+    }
+
+    private function initializeFileStorage() {
+        // Initialize file-based storage directories and files
+        $data_dir = __DIR__ . '/../data/';
+        if (!is_dir($data_dir)) {
+            mkdir($data_dir, 0755, true);
+        }
+
+        $tables = [
+            'users', 'courses', 'videos', 'enrollments', 'video_progress',
+            'quizzes', 'quiz_questions', 'quiz_options', 'quiz_attempts',
+            'quiz_responses', 'certificates', 'subtitles', 'translation_jobs'
+        ];
+
+        foreach ($tables as $table) {
+            $file = $data_dir . $table . '.json';
+            if (!file_exists($file)) {
+                file_put_contents($file, json_encode([], JSON_PRETTY_PRINT));
+            }
+        }
+
+        // Create upload directories
+        $upload_dirs = [
+            __DIR__ . '/../uploads/subtitles',
+            __DIR__ . '/../uploads/merged_videos'
+        ];
+
+        foreach ($upload_dirs as $dir) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+        }
     }
     public function prepare($query) {
         $conn = $this->getConnection();

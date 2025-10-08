@@ -129,6 +129,11 @@ function loadPopularCourses() {
                         </div>
                     </div>
                 `).join('');
+
+                // Apply translation to dynamically loaded content
+                if (typeof currentLanguage !== 'undefined' && typeof translateDynamicContent === 'function') {
+                    translateDynamicContent(currentLanguage);
+                }
             } else {
                 coursesGrid.innerHTML = `
                     <div class="course-card">
@@ -165,6 +170,11 @@ function loadPopularCourses() {
                         </div>
                     </div>
                 `;
+
+                // Apply translation to fallback content
+                if (typeof currentLanguage !== 'undefined' && typeof translateDynamicContent === 'function') {
+                    translateDynamicContent(currentLanguage);
+                }
             }
         })
         .catch(error => {

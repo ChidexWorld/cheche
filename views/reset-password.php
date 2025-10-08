@@ -49,11 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $valid_token) {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
             // Update user password
-            $updated = $conn->update('users', [
-                'password' => $hashed_password
-            ], [
-                'email' => $email
-            ]);
+            $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+            $updated = $stmt->execute([$hashed_password, $email]);
 
             if ($updated) {
                 // Remove used reset token

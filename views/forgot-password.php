@@ -22,7 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conn = $database->getConnection();
 
                 // Check if user exists
-                $user = $conn->selectOne('users', ['email' => $email]);
+                $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+                $stmt->execute([$email]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($user) {
                     $show_password_form = true;
@@ -58,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Update password
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $conn->update('users', ['password' => $hashed_password], ['email' => $verified_email]);
+                $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+                $stmt->execute([$hashed_password, $verified_email]);
 
                 $message = 'Password updated successfully! You can now <a href="login.php">login</a> with your new password.';
             } catch (Exception $e) {
@@ -76,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password - Cheche</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/language-dropdown.css">
 </head>
 <body>
     <nav class="navbar">
@@ -86,8 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </a>
             </div>
             <div class="nav-links">
-                <a href="index.php">Home</a>
-                <a href="login.php" class="btn-secondary">Login</a>
+                <div class="language-dropdown">
+                    <button class="language-toggle" onclick="toggleDropdown()">
+                        🌍 <span id="currentLang">English</span> ▼
+                    </button>
+                    <div class="dropdown-content" id="languageDropdown">
+                        <a href="#" onclick="changeLanguage('en')">English</a>
+                        <a href="#" onclick="changeLanguage('ig')">Igbo</a>
+                    </div>
+                </div>
+                <a href="index.php" data-translate>Home</a>
+                <a href="login.php" class="btn-secondary" data-translate>Login</a>
             </div>
         </div>
     </nav>
@@ -151,5 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/language.js"></script>
 </body>
 </html>

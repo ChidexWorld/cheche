@@ -26,10 +26,9 @@ try {
     $conn = $database->getConnection();
 
     // Check if enrollment exists
-    $enrollment = $conn->selectOne('enrollments', [
-        'student_id' => $_SESSION['user_id'],
-        'course_id' => $course_id
-    ]);
+    $stmt = $conn->prepare("SELECT * FROM enrollments WHERE student_id = ? AND course_id = ?");
+    $stmt->execute([$_SESSION['user_id'], $course_id]);
+    $enrollment = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$enrollment) {
         if ($is_api) {
@@ -41,19 +40,32 @@ try {
         exit();
     }
 
-    // Remove enrollment
-    $success = $conn->delete('enrollments', [
-        'student_id' => $_SESSION['user_id'],
-        'course_id' => $course_id
-    ]);
+    // Start a transaction for consistency
+    $conn->beginTransaction();
 
-    // Also remove video progress for this course
-    $videos = $conn->select('videos', ['course_id' => $course_id]);
-    foreach ($videos as $video) {
-        $conn->delete('video_progress', [
-            'student_id' => $_SESSION['user_id'],
-            'video_id' => $video['id']
-        ]);
+    try {
+        // Remove enrollment
+        $stmt = $conn->prepare("DELETE FROM enrollments WHERE student_id = ? AND course_id = ?");
+        $success = $stmt->execute([$_SESSION['user_id'], $course_id]);
+
+        // Get all video IDs for this course
+        $stmt = $conn->prepare("SELECT id FROM videos WHERE course_id = ?");
+        $stmt->execute([$course_id]);
+        $videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Remove video progress for all videos in this course
+        if (!empty($videos)) {
+            $videoIds = array_column($videos, 'id');
+            $placeholders = str_repeat('?,', count($videoIds) - 1) . '?';
+            $stmt = $conn->prepare("DELETE FROM video_progress WHERE student_id = ? AND video_id IN ($placeholders)");
+            $stmt->execute(array_merge([$_SESSION['user_id']], $videoIds));
+        }
+
+        $conn->commit();
+    } catch (PDOException $e) {
+        $conn->rollBack();
+        $success = false;
+        error_log($e->getMessage());
     }
 
     if ($success) {

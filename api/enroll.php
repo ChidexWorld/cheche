@@ -26,7 +26,9 @@ try {
     $conn = $database->getConnection();
 
     // Check if course exists
-    $course = $conn->selectOne('courses', ['id' => $course_id]);
+    $stmt = $conn->prepare("SELECT * FROM courses WHERE id = ?");
+    $stmt->execute([$course_id]);
+    $course = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$course) {
         if ($is_api) {
@@ -39,10 +41,9 @@ try {
     }
 
     // Check if already enrolled
-    $existing_enrollment = $conn->selectOne('enrollments', [
-        'student_id' => $_SESSION['user_id'],
-        'course_id' => $course_id
-    ]);
+    $stmt = $conn->prepare("SELECT * FROM enrollments WHERE student_id = ? AND course_id = ?");
+    $stmt->execute([$_SESSION['user_id'], $course_id]);
+    $existing_enrollment = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($existing_enrollment) {
         if ($is_api) {
@@ -55,12 +56,14 @@ try {
     }
 
     // Enroll student
-    $enrollment_id = $conn->insert('enrollments', [
-        'student_id' => $_SESSION['user_id'],
-        'course_id' => $course_id,
-        'enrolled_at' => date('Y-m-d H:i:s'),
-        'progress' => 0.00
+    $stmt = $conn->prepare("INSERT INTO enrollments (student_id, course_id, enrolled_at, progress) VALUES (?, ?, ?, ?)");
+    $success = $stmt->execute([
+        $_SESSION['user_id'],
+        $course_id,
+        date('Y-m-d H:i:s'),
+        0.00
     ]);
+    $enrollment_id = $success ? $conn->lastInsertId() : false;
 
     if ($enrollment_id) {
         if ($is_api) {
