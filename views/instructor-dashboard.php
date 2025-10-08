@@ -10,7 +10,33 @@ $db = $database->getConnection();
 // Initialize variables
 $success_message = $_SESSION["success_message"] ?? "";
 $error_message = $_SESSION["error_message"] ?? "";
-// Get instructor's quizzes
+
+// Get instructor info FIRST
+try {
+    $stmt = $db->prepare("SELECT full_name FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION["user_id"]]);
+    $instructor = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Fallback to file-based database for instructor info
+    $instructor = $db->selectOne('users', ['id' => $_SESSION["user_id"]]);
+}
+
+// Get instructor courses SECOND (before using it)
+try {
+    $stmt = $db->prepare("SELECT * FROM courses WHERE instructor_id = ?");
+    $stmt->execute([$_SESSION["user_id"]]);
+    $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Fallback to file-based database for courses
+    $courses = $db->select('courses', ['instructor_id' => $_SESSION["user_id"]]);
+}
+
+// Initialize courses as empty array if null
+if (!$courses) {
+    $courses = [];
+}
+
+// NOW we can use $courses - Get instructor's quizzes
 $instructor_quizzes = [];
 foreach ($courses as $course) {
     try {
@@ -72,26 +98,6 @@ $active_tab = $_GET["tab"] ?? "overview";
 // Clear session messages
 unset($_SESSION["success_message"]);
 unset($_SESSION["error_message"]);
-
-// Get instructor info
-try {
-    $stmt = $db->prepare("SELECT full_name FROM users WHERE id = ?");
-    $stmt->execute([$_SESSION["user_id"]]);
-    $instructor = $stmt->fetch(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Fallback to file-based database for instructor info
-    $instructor = $db->selectOne('users', ['id' => $_SESSION["user_id"]]);
-}
-
-// Get instructor courses
-try {
-    $stmt = $db->prepare("SELECT * FROM courses WHERE instructor_id = ?");
-    $stmt->execute([$_SESSION["user_id"]]);
-    $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Fallback to file-based database for courses
-    $courses = $db->select('courses', ['instructor_id' => $_SESSION["user_id"]]);
-}
 
 // Get course statistics
 $total_courses = count($courses);
@@ -406,7 +412,7 @@ foreach ($courses as $course) {
                         <div class="quizzes-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
                             <?php foreach ($instructor_quizzes as $quiz): ?>
                                 <div class="quiz-card" style="background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                                    <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 1rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
                                         <div style="flex: 1;">
                                             <h4 style="margin: 0 0 0.5rem 0;"><?php echo htmlspecialchars($quiz['title']); ?></h4>
                                             <p style="margin: 0; color: #666; font-size: 0.9rem;"><?php echo htmlspecialchars($quiz['course_title']); ?></p>
