@@ -1,0 +1,29 @@
+1
+00:00:00,440 --> 00:00:05,517
+The main objective of the proposed
+eLearning platform was to design
+
+2
+00:00:05,600 --> 00:00:10,637
+and implement a modern, scalable
+and user-friendly system that addressed
+
+3
+00:00:10,720 --> 00:00:15,080
+the limitations of the existing UDeme
+model, particularly
+
+4
+00:00:15,520 --> 00:00:17,240
+in the Nigerian context.
+
+5
+00:00:17,720 --> 00:00:22,280
+Specifically, the system was developed
+to provide instructors with tools
+
+6
+00:00:22,600 --> 00:00:28,040
+to create and manage courses, upload video
+content, and monitor learners' engagement.
+

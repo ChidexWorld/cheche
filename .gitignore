@@ -6,7 +6,7 @@
 .env.production
 
 # Upload directories
-uploads/
+# uploads/
 temp/
 
 # Log files
